@@ -1,0 +1,162 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import WorkerHeader from "../components/WorkerHeader";
+import WorkerJobCard from "../components/WorkerJobCard";
+import api from "../api/axios";
+import {
+    getSavedUser,
+    isActiveWorkerSession,
+    likedShiftIdsFromResponse,
+    matchesShiftSearch,
+} from "./workerUtils";
+
+function WorkerMatches() {
+    const navigate = useNavigate();
+    const [user] = useState(getSavedUser);
+    const [profile, setProfile] = useState(null);
+    const [shifts, setShifts] = useState([]);
+    const [applications, setApplications] = useState([]);
+    const [matches, setMatches] = useState({});
+    const [likedShiftIds, setLikedShiftIds] = useState(new Set());
+    const [search, setSearch] = useState("");
+    const [feedback, setFeedback] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [submittingShiftIds, setSubmittingShiftIds] = useState([]);
+    const [togglingLikeIds, setTogglingLikeIds] = useState([]);
+
+    useEffect(() => {
+        if (!isActiveWorkerSession(user)) {
+            localStorage.removeItem("user");
+            navigate("/login");
+            return;
+        }
+
+        const loadMatches = async () => {
+            try {
+                setIsLoading(true);
+                const [profileResponse, shiftsResponse, applicationsResponse, matchesResponse, likedJobsResponse] = await Promise.all([
+                    api.get("/users/me"),
+                    api.get("/shifts"),
+                    api.get("/applications"),
+                    api.get("/matches/worker/shifts"),
+                    api.get("/liked-jobs"),
+                ]);
+                setProfile(profileResponse.data);
+                setShifts(shiftsResponse.data);
+                setApplications(applicationsResponse.data);
+                setMatches(Object.fromEntries(matchesResponse.data.map((match) => [match.targetId, match])));
+                setLikedShiftIds(likedShiftIdsFromResponse(likedJobsResponse.data));
+            } catch (error) {
+                console.error(error);
+                setFeedback("We couldn't load AI job matches right now.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadMatches();
+    }, [navigate, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleApply = async (shiftId) => {
+        try {
+            setFeedback("");
+            setSubmittingShiftIds((current) => [...current, shiftId]);
+            const response = await api.post("/applications", { shiftId });
+            setApplications((current) => [...current, response.data]);
+            setFeedback("Application submitted successfully.");
+        } catch (error) {
+            console.error(error);
+            setFeedback(error.response?.data?.message || "Unable to apply for this shift right now.");
+        } finally {
+            setSubmittingShiftIds((current) => current.filter((currentShiftId) => currentShiftId !== shiftId));
+        }
+    };
+
+    const handleToggleLike = async (shiftId, isLiked) => {
+        try {
+            setFeedback("");
+            setTogglingLikeIds((current) => [...current, shiftId]);
+            if (isLiked) {
+                await api.delete(`/liked-jobs/${shiftId}`);
+                setLikedShiftIds((current) => {
+                    const next = new Set(current);
+                    next.delete(shiftId);
+                    return next;
+                });
+            } else {
+                await api.post(`/liked-jobs/${shiftId}`);
+                setLikedShiftIds((current) => new Set([...current, shiftId]));
+            }
+        } catch (error) {
+            console.error(error);
+            setFeedback(error.response?.data?.message || "Unable to update liked jobs right now.");
+        } finally {
+            setTogglingLikeIds((current) => current.filter((currentShiftId) => currentShiftId !== shiftId));
+        }
+    };
+
+    const appliedShiftIds = new Set(applications.map((application) => application.shift?.id));
+    const matchedShifts = shifts
+        .filter((shift) => shift.status === "OPEN")
+        .filter((shift) => matchesShiftSearch(shift, search))
+        .sort((first, second) => {
+            const firstMatch = matches[first.id];
+            const secondMatch = matches[second.id];
+            return (firstMatch?.rank || 999) - (secondMatch?.rank || 999);
+        });
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+            <WorkerHeader userName={profile?.name || user?.name} />
+
+            <div className="px-8 py-12 md:px-20">
+                <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">AI Job Match</p>
+                        <h2 className="mt-3 text-4xl font-bold text-gray-900">Jobs related to your profile</h2>
+                        <p className="mt-3 max-w-2xl text-gray-600">
+                            Matches are ranked by your skills, location, rating, availability, and completed shifts.
+                        </p>
+                    </div>
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search matched jobs"
+                        className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                </div>
+
+                {feedback && (
+                    <div className="mb-8 max-w-3xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                        {feedback}
+                    </div>
+                )}
+
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    {matchedShifts.length > 0 ? (
+                        matchedShifts.map((shift) => (
+                            <WorkerJobCard
+                                key={shift.id}
+                                shift={shift}
+                                match={matches[shift.id]}
+                                hasApplied={appliedShiftIds.has(shift.id)}
+                                isSubmitting={submittingShiftIds.includes(shift.id)}
+                                isLiked={likedShiftIds.has(shift.id)}
+                                isTogglingLike={togglingLikeIds.includes(shift.id)}
+                                isLoadingMatches={isLoading}
+                                onApply={handleApply}
+                                onToggleLike={handleToggleLike}
+                            />
+                        ))
+                    ) : (
+                        <p className="text-gray-600">No matched jobs found for this search.</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default WorkerMatches;
