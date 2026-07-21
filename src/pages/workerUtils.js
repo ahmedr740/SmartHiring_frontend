@@ -12,7 +12,14 @@ export const shiftStatusClasses = {
     CANCELLED: "bg-rose-100 text-rose-700",
 };
 
+export const issueStatusClasses = {
+    OPEN: "bg-rose-100 text-rose-700",
+    REVIEWING: "bg-amber-100 text-amber-700",
+    RESOLVED: "bg-emerald-100 text-emerald-700",
+};
+
 export const emptyRatingDraft = { rating: "5", review: "" };
+export const emptyIssueDraft = { category: "GENERAL", description: "" };
 
 export const getSavedUser = () => JSON.parse(localStorage.getItem("user") || "null");
 
@@ -44,6 +51,64 @@ export const matchesShiftSearch = (shift, searchValue) => {
 export const likedShiftIdsFromResponse = (likedJobs) =>
     new Set(likedJobs.map((likedJob) => likedJob.shift?.id).filter(Boolean));
 
-export const isAiMatchSource = (source) => source === "OLLAMA" || source === "N8N_OLLAMA";
+export const isAiMatchSource = (source) =>
+    source === "OLLAMA" || source === "N8N_OLLAMA" || source === "N8N_DEEPSEEK";
 
-export const matchSourceLabel = (source) => (isAiMatchSource(source) ? "AI" : "Fallback");
+export const matchSourceLabel = (source) => {
+    if (source === "N8N_DEEPSEEK") {
+        return "DeepSeek AI";
+    }
+    if (source === "OLLAMA" || source === "N8N_OLLAMA") {
+        return "Local AI";
+    }
+    return "Fallback";
+};
+
+export const getApiErrorMessage = (error, fallback) => {
+    if (!error.response) {
+        return "We couldn't reach the backend service. Please wait a moment and try again.";
+    }
+
+    return error.response?.data?.message || fallback;
+};
+
+export const buildWorkerReminders = (applications) =>
+    applications
+        .filter((application) =>
+            application.status === "ACCEPTED" ||
+            application.status === "REJECTED" ||
+            application.shift?.status === "COMPLETED" ||
+            application.shift?.paid
+        )
+        .slice(0, 4)
+        .map((application) => {
+            if (application.shift?.paid) {
+                return `${application.shift?.title}: payment has been marked as paid.`;
+            }
+
+            if (application.shift?.status === "COMPLETED") {
+                return `${application.shift?.title}: shift completed, rating is available.`;
+            }
+
+            if (application.status === "REJECTED") {
+                return `${application.shift?.title}: your application was rejected.`;
+            }
+
+            return `${application.shift?.title}: your application was accepted.`;
+        });
+
+export const buildManagerReminders = (shifts, applications) => {
+    const pendingCount = applications.filter((application) => application.status === "PENDING").length;
+    const completedUnpaid = shifts.filter((shift) => shift.status === "COMPLETED" && !shift.paid).length;
+    const readyToRate = applications.filter((application) =>
+        application.status === "ACCEPTED" &&
+        application.shift?.status === "COMPLETED" &&
+        application.workerRating == null
+    ).length;
+
+    return [
+        pendingCount > 0 ? `${pendingCount} application${pendingCount === 1 ? "" : "s"} waiting for review.` : null,
+        completedUnpaid > 0 ? `${completedUnpaid} completed shift${completedUnpaid === 1 ? "" : "s"} still need payment marked.` : null,
+        readyToRate > 0 ? `${readyToRate} completed worker rating${readyToRate === 1 ? "" : "s"} still need submission.` : null,
+    ].filter(Boolean);
+};

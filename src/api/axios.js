@@ -23,7 +23,21 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
     (response) => response,
-    (error) => Promise.reject(error)
+    (error) => {
+        const status = error.response?.status;
+        const user = getStoredSession();
+        const requestUrl = error.config?.url || "";
+        const isAuthRoute = requestUrl.startsWith("/auth/");
+
+        if (user?.token && !isAuthRoute && status === 401) {
+            localStorage.removeItem("user");
+            if (window.location.pathname !== "/login") {
+                window.location.href = "/login?session=expired";
+            }
+        }
+
+        return Promise.reject(error);
+    }
 );
 
 export default api;

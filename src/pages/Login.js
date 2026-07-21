@@ -2,17 +2,37 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
+const quickAccessAccounts = [
+    { label: "Worker", email: "worker@smarthiring.local" },
+    { label: "Manager", email: "manager@smarthiring.local" },
+    { label: "Admin", email: "admin@smarthiring.local" },
+];
+const showQuickAccess = process.env.REACT_APP_DEMO_MODE !== "false";
+
 function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [error, setError] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("session") === "expired"
+            ? "Your session expired. Please log in again."
+            : "";
+    });
+
+    const fillQuickAccessAccount = (accountEmail) => {
+        setEmail(accountEmail);
+        setPassword("StaffMatch2026!");
+        setError("");
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
 
         try {
             setError("");
+            setIsLoggingIn(true);
             const response = await api.post("/auth/login", { email, password });
 
             const user = response.data;
@@ -31,11 +51,13 @@ function Login() {
         } catch (error) {
             console.error(error);
             if (!error.response) {
-                setError("We couldn't reach the backend server. Make sure the Spring Boot app is running on http://localhost:8080.");
+                setError("We couldn't reach the backend service. Please wait a moment and try again.");
                 return;
             }
 
             setError(error.response?.data?.message || "Invalid email or password");
+        } finally {
+            setIsLoggingIn(false);
         }
     };
 
@@ -81,6 +103,25 @@ function Login() {
                         </div>
                     )}
 
+                    {showQuickAccess && (
+                    <div className="mb-6 rounded-2xl border border-orange-100 bg-orange-50/70 p-4">
+                        <p className="text-sm font-semibold text-gray-800">Quick access accounts</p>
+                        <p className="mt-1 text-xs text-gray-500">Use these accounts for presentation login.</p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                            {quickAccessAccounts.map((account) => (
+                                <button
+                                    key={account.email}
+                                    type="button"
+                                    onClick={() => fillQuickAccessAccount(account.email)}
+                                    className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50"
+                                >
+                                    {account.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    )}
+
                     <form onSubmit={handleLogin} className="space-y-5">
 
                         <div>
@@ -113,9 +154,10 @@ function Login() {
 
                         <button
                             type="submit"
-                            className="w-full bg-orange-500 text-white p-4 rounded-xl hover:bg-orange-600 font-semibold transition shadow-lg"
+                            disabled={isLoggingIn}
+                            className="w-full bg-orange-500 text-white p-4 rounded-xl hover:bg-orange-600 font-semibold transition shadow-lg disabled:cursor-not-allowed disabled:bg-orange-300"
                         >
-                            Login
+                            {isLoggingIn ? "Logging in..." : "Login"}
                         </button>
                     </form>
 

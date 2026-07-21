@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import NotificationBell from "../components/NotificationBell";
+import { getApiErrorMessage, issueStatusClasses } from "./workerUtils";
 
 const sections = [
     { id: "dashboard", label: "Dashboard" },
@@ -10,6 +12,7 @@ const sections = [
     { id: "workers", label: "Workers" },
     { id: "shifts", label: "Shifts" },
     { id: "applications", label: "Applications" },
+    { id: "issues", label: "Issue Reports" },
 ];
 
 const getSavedUser = () => JSON.parse(localStorage.getItem("user") || "null");
@@ -26,6 +29,7 @@ const buildStatCards = (overview) => [
     { label: "Completed Shifts", value: overview.completedShifts },
     { label: "Pending Applications", value: overview.pendingApplications },
     { label: "Accepted Applications", value: overview.acceptedApplications },
+    { label: "Open Issues", value: overview.openIssues },
 ];
 
 function AdminHome() {
@@ -43,12 +47,14 @@ function AdminHome() {
     const [pendingManagers, setPendingManagers] = useState([]);
     const [shifts, setShifts] = useState([]);
     const [applications, setApplications] = useState([]);
+    const [issues, setIssues] = useState([]);
     const [feedback, setFeedback] = useState("");
     const [busyKey, setBusyKey] = useState("");
     const [userSearch, setUserSearch] = useState("");
     const [userStatusFilter, setUserStatusFilter] = useState("ALL");
     const [shiftStatusFilter, setShiftStatusFilter] = useState("ALL");
     const [applicationStatusFilter, setApplicationStatusFilter] = useState("ALL");
+    const [issueStatusFilter, setIssueStatusFilter] = useState("ALL");
 
     const fetchAdminData = async () => {
         try {
@@ -58,12 +64,14 @@ function AdminHome() {
                 pendingResponse,
                 shiftsResponse,
                 applicationsResponse,
+                issuesResponse,
             ] = await Promise.all([
                 api.get("/admin/overview"),
                 api.get("/admin/users"),
                 api.get("/admin/manager-requests"),
                 api.get("/shifts"),
                 api.get("/applications"),
+                api.get("/issues"),
             ]);
 
             setOverview(overviewResponse.data);
@@ -71,9 +79,10 @@ function AdminHome() {
             setPendingManagers(pendingResponse.data);
             setShifts(shiftsResponse.data);
             setApplications(applicationsResponse.data);
+            setIssues(issuesResponse.data);
         } catch (error) {
             console.error(error);
-            setFeedback(error.response?.data?.message || "We couldn't load the admin dashboard right now.");
+            setFeedback(getApiErrorMessage(error, "We couldn't load the admin dashboard right now."));
         }
     };
 
@@ -99,7 +108,7 @@ function AdminHome() {
             setFeedback(successMessage);
         } catch (error) {
             console.error(error);
-            setFeedback(error.response?.data?.message || "We couldn't complete that action right now.");
+            setFeedback(getApiErrorMessage(error, "We couldn't complete that action right now."));
         } finally {
             setBusyKey("");
         }
@@ -150,6 +159,15 @@ function AdminHome() {
         );
     };
 
+    const handleIssueStatus = async (issueId, status) => {
+        const key = `issue-status-${issueId}-${status}`;
+        setBusyKey(key);
+        await runAdminAction(
+            () => api.put(`/issues/${issueId}/status`, { status }),
+            `Issue updated to ${status}.`
+        );
+    };
+
     const matchesUserSearch = (currentUser) =>
         normalizeSearch(currentUser.name).includes(normalizeSearch(userSearch)) ||
         normalizeSearch(currentUser.email).includes(normalizeSearch(userSearch)) ||
@@ -186,6 +204,17 @@ function AdminHome() {
             normalizeSearch(application.shift?.title).includes(normalizeSearch(userSearch)) ||
             normalizeSearch(application.shift?.manager?.name).includes(normalizeSearch(userSearch)) ||
             normalizeSearch(application.shift?.manager?.restaurantName).includes(normalizeSearch(userSearch))
+        )
+    );
+
+    const filteredIssues = issues.filter((issue) =>
+        (issueStatusFilter === "ALL" || issue.status === issueStatusFilter) &&
+        (
+            normalizeSearch(issue.reportedBy?.name).includes(normalizeSearch(userSearch)) ||
+            normalizeSearch(issue.reportedBy?.email).includes(normalizeSearch(userSearch)) ||
+            normalizeSearch(issue.shift?.title).includes(normalizeSearch(userSearch)) ||
+            normalizeSearch(issue.shift?.manager?.restaurantName).includes(normalizeSearch(userSearch)) ||
+            normalizeSearch(issue.description).includes(normalizeSearch(userSearch))
         )
     );
 
@@ -231,7 +260,7 @@ function AdminHome() {
                     <option value="CANCELLED">Cancelled</option>
                 </select>
             )}
-            {showApplicationFilters && (
+            {showApplicationFilters === true && (
                 <select
                     value={applicationStatusFilter}
                     onChange={(event) => setApplicationStatusFilter(event.target.value)}
@@ -241,6 +270,18 @@ function AdminHome() {
                     <option value="PENDING">Pending</option>
                     <option value="ACCEPTED">Accepted</option>
                     <option value="REJECTED">Rejected</option>
+                </select>
+            )}
+            {showApplicationFilters === "issues" && (
+                <select
+                    value={issueStatusFilter}
+                    onChange={(event) => setIssueStatusFilter(event.target.value)}
+                    className="rounded-2xl border border-orange-200 px-4 py-3"
+                >
+                    <option value="ALL">All Issue Statuses</option>
+                    <option value="OPEN">Open</option>
+                    <option value="REVIEWING">Reviewing</option>
+                    <option value="RESOLVED">Resolved</option>
                 </select>
             )}
         </div>
@@ -299,7 +340,7 @@ function AdminHome() {
                                         disabled={busyKey === `user-status-${currentUser.id}-${status}`}
                                         className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
-                                        {status}
+                                        {busyKey === `user-status-${currentUser.id}-${status}` ? "Updating..." : status}
                                     </button>
                                 ))}
                             </div>
@@ -342,15 +383,8 @@ function AdminHome() {
                 </aside>
 
                 <main className="flex-1 px-6 py-8 md:px-10">
-                    <div className="mb-8 flex flex-col gap-4 rounded-[2rem] bg-white px-6 py-5 shadow-xl md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Administrator</p>
-                            <h2 className="mt-2 text-3xl font-bold">Welcome, {user?.name}</h2>
-                            <p className="mt-2 text-gray-600">
-                                This panel now runs on protected backend permissions and token-based requests.
-                            </p>
-                        </div>
-
+                    <div className="mb-8 flex items-center justify-end gap-3">
+                        <NotificationBell />
                         <button
                             type="button"
                             onClick={handleLogout}
@@ -576,7 +610,7 @@ function AdminHome() {
                                                     disabled={busyKey === `user-status-${manager.id}-ACTIVE`}
                                                     className="rounded-2xl bg-orange-500 px-4 py-3 font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
                                                 >
-                                                    Approve
+                                                    {busyKey === `user-status-${manager.id}-ACTIVE` ? "Approving..." : "Approve"}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -584,7 +618,7 @@ function AdminHome() {
                                                     disabled={busyKey === `user-status-${manager.id}-REJECTED`}
                                                     className="rounded-2xl border border-orange-300 px-4 py-3 font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
                                                 >
-                                                    Reject
+                                                    {busyKey === `user-status-${manager.id}-REJECTED` ? "Rejecting..." : "Reject"}
                                                 </button>
                                             </div>
                                         </article>
@@ -681,7 +715,7 @@ function AdminHome() {
                                                             disabled={busyKey === `shift-status-${shift.id}-${status}`}
                                                             className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                         >
-                                                            {status}
+                                                            {busyKey === `shift-status-${shift.id}-${status}` ? "Updating..." : status}
                                                         </button>
                                                     ))}
                                                     <button
@@ -690,7 +724,7 @@ function AdminHome() {
                                                         disabled={busyKey === `shift-delete-${shift.id}`}
                                                         className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                     >
-                                                        Delete
+                                                        {busyKey === `shift-delete-${shift.id}` ? "Deleting..." : "Delete"}
                                                     </button>
                                                 </div>
                                             </td>
@@ -751,7 +785,69 @@ function AdminHome() {
                                                             disabled={busyKey === `application-status-${application.id}-${status}`}
                                                             className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                         >
-                                                            {status}
+                                                            {busyKey === `application-status-${application.id}-${status}` ? "Updating..." : status}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSection === "issues" && (
+                        <div className="space-y-5">
+                            <div>
+                                <h3 className="text-3xl font-bold">Issue Reports</h3>
+                                <p className="mt-2 text-gray-600">Track worker and manager reports for disputes, payment questions, and shift problems.</p>
+                            </div>
+                            {renderFilters(false, "issues")}
+                            <div className="overflow-x-auto rounded-3xl bg-white shadow-xl">
+                                <table className="min-w-full text-left text-sm">
+                                    <thead className="bg-orange-50 text-gray-600">
+                                    <tr>
+                                        <th className="px-5 py-4 font-semibold">Reporter</th>
+                                        <th className="px-5 py-4 font-semibold">Shift</th>
+                                        <th className="px-5 py-4 font-semibold">Issue</th>
+                                        <th className="px-5 py-4 font-semibold">Status</th>
+                                        <th className="px-5 py-4 font-semibold">Actions</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {filteredIssues.map((issue) => (
+                                        <tr key={issue.id} className="border-t border-orange-100 align-top">
+                                            <td className="px-5 py-4 text-gray-700">
+                                                <p className="font-semibold">{issue.reportedBy?.name || "N/A"}</p>
+                                                <p>{issue.reportedBy?.email || "N/A"}</p>
+                                            </td>
+                                            <td className="px-5 py-4 text-gray-700">
+                                                <p className="font-semibold">{issue.shift?.title || "N/A"}</p>
+                                                <p>{issue.shift?.manager?.restaurantName || issue.shift?.manager?.name || "N/A"}</p>
+                                            </td>
+                                            <td className="px-5 py-4 text-gray-700">
+                                                <p className="font-semibold">{issue.category || "GENERAL"}</p>
+                                                <p>{issue.description}</p>
+                                                <p className="mt-2 text-xs text-gray-500">{formatDate(issue.createdAt)}</p>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${issueStatusClasses[issue.status] || "bg-gray-100 text-gray-700"}`}>
+                                                    {issue.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {["OPEN", "REVIEWING", "RESOLVED"].map((status) => (
+                                                        <button
+                                                            key={status}
+                                                            type="button"
+                                                            onClick={() => handleIssueStatus(issue.id, status)}
+                                                            disabled={busyKey === `issue-status-${issue.id}-${status}`}
+                                                            className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        >
+                                                            {busyKey === `issue-status-${issue.id}-${status}` ? "Updating..." : status}
                                                         </button>
                                                     ))}
                                                 </div>

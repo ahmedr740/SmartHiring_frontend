@@ -19,8 +19,10 @@ jest.mock("react-router-dom", () => ({
   Routes: ({ children }) => <div>{children}</div>,
   Route: ({ element }) => element,
   useNavigate: () => jest.fn(),
+  useParams: () => ({ shiftId: "1" }),
 }), { virtual: true });
 
+jest.mock("./components/NotificationBell", () => () => null);
 test("renders Smart Hiring landing page content", () => {
   render(<App />);
   expect(screen.getAllByText(/smart hiring/i).length).toBeGreaterThan(0);

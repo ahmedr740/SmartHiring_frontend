@@ -5,7 +5,14 @@ import WorkerHeader from "../components/WorkerHeader";
 import WorkerJobCard from "../components/WorkerJobCard";
 import api from "../api/axios";
 import {
+    getNotificationButtonLabel,
+    getNotificationPermission,
+    getNotificationPreference,
+    toggleNotificationPreference,
+} from "../api/browserNotifications";
+import {
     getSavedUser,
+    getApiErrorMessage,
     isActiveWorkerSession,
     likedShiftIdsFromResponse,
     matchesShiftSearch,
@@ -24,6 +31,8 @@ function WorkerMatches() {
     const [isLoading, setIsLoading] = useState(false);
     const [submittingShiftIds, setSubmittingShiftIds] = useState([]);
     const [togglingLikeIds, setTogglingLikeIds] = useState([]);
+    const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => getNotificationPreference(user?.id));
 
     useEffect(() => {
         if (!isActiveWorkerSession(user)) {
@@ -35,21 +44,30 @@ function WorkerMatches() {
         const loadMatches = async () => {
             try {
                 setIsLoading(true);
-                const [profileResponse, shiftsResponse, applicationsResponse, matchesResponse, likedJobsResponse] = await Promise.all([
+                const [profileResponse, shiftsResponse, applicationsResponse] = await Promise.all([
                     api.get("/users/me"),
                     api.get("/shifts"),
                     api.get("/applications"),
-                    api.get("/matches/worker/shifts"),
-                    api.get("/liked-jobs"),
                 ]);
                 setProfile(profileResponse.data);
                 setShifts(shiftsResponse.data);
                 setApplications(applicationsResponse.data);
-                setMatches(Object.fromEntries(matchesResponse.data.map((match) => [match.targetId, match])));
-                setLikedShiftIds(likedShiftIdsFromResponse(likedJobsResponse.data));
+
+                const [matchesResult, likedJobsResult] = await Promise.allSettled([
+                    api.get("/matches/worker/shifts"),
+                    api.get("/liked-jobs"),
+                ]);
+
+                if (matchesResult.status === "fulfilled") {
+                    setMatches(Object.fromEntries(matchesResult.value.data.map((match) => [match.targetId, match])));
+                }
+
+                if (likedJobsResult.status === "fulfilled") {
+                    setLikedShiftIds(likedShiftIdsFromResponse(likedJobsResult.value.data));
+                }
             } catch (error) {
                 console.error(error);
-                setFeedback("We couldn't load AI job matches right now.");
+                setFeedback(getApiErrorMessage(error, "We couldn't load AI job matches right now."));
             } finally {
                 setIsLoading(false);
             }
@@ -96,6 +114,12 @@ function WorkerMatches() {
         }
     };
 
+    const handleToggleNotifications = async () => {
+        const result = await toggleNotificationPreference(user?.id);
+        setNotificationPermission(result.permission);
+        setNotificationsEnabled(result.enabled);
+    };
+
     const appliedShiftIds = new Set(applications.map((application) => application.shift?.id));
     const matchedShifts = shifts
         .filter((shift) => shift.status === "OPEN")
@@ -108,7 +132,12 @@ function WorkerMatches() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
-            <WorkerHeader userName={profile?.name || user?.name} />
+            <WorkerHeader
+                userName={profile?.name || user?.name}
+                notificationLabel={getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
+                notificationsEnabled={notificationsEnabled}
+                onToggleNotifications={handleToggleNotifications}
+            />
 
             <div className="px-8 py-12 md:px-20">
                 <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -117,6 +146,9 @@ function WorkerMatches() {
                         <h2 className="mt-3 text-4xl font-bold text-gray-900">Jobs related to your profile</h2>
                         <p className="mt-3 max-w-2xl text-gray-600">
                             Matches are ranked by your skills, location, rating, availability, and completed shifts.
+                        </p>
+                        <p className="mt-2 max-w-2xl text-sm text-gray-500">
+                            AI scores are advisory. Review the full shift details and make your own decision before applying.
                         </p>
                     </div>
                     <input
@@ -134,6 +166,11 @@ function WorkerMatches() {
                     </div>
                 )}
 
+                {isLoading ? (
+                    <div className="rounded-2xl border border-orange-100 bg-white p-6 text-gray-600 shadow-sm">
+                        Loading job matches...
+                    </div>
+                ) : (
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                     {matchedShifts.length > 0 ? (
                         matchedShifts.map((shift) => (
@@ -145,15 +182,19 @@ function WorkerMatches() {
                                 isSubmitting={submittingShiftIds.includes(shift.id)}
                                 isLiked={likedShiftIds.has(shift.id)}
                                 isTogglingLike={togglingLikeIds.includes(shift.id)}
-                                isLoadingMatches={isLoading}
                                 onApply={handleApply}
                                 onToggleLike={handleToggleLike}
                             />
                         ))
                     ) : (
-                        <p className="text-gray-600">No matched jobs found for this search.</p>
+                        <p className="text-gray-600">
+                            {search
+                                ? "No matched jobs found for this search."
+                                : "No open jobs are available to rank yet. Add shifts with a manager account first."}
+                        </p>
                     )}
                 </div>
+                )}
             </div>
         </div>
     );

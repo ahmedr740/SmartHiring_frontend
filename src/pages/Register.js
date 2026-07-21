@@ -16,6 +16,7 @@ function Register() {
         location: "",
     });
     const [feedback, setFeedback] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e) => {
         setFormData({
@@ -29,6 +30,7 @@ function Register() {
 
         try {
             setFeedback("");
+            setIsSubmitting(true);
             await api.post("/auth/register", formData);
 
             if (formData.role === "MANAGER") {
@@ -41,6 +43,8 @@ function Register() {
         } catch (error) {
             console.error(error);
             setFeedback(error.response?.data?.message || "Registration failed");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -213,9 +217,10 @@ function Register() {
 
                         <button
                             type="submit"
-                            className="w-full bg-orange-500 text-white p-4 rounded-xl hover:bg-orange-600 font-semibold transition shadow-lg"
+                            disabled={isSubmitting}
+                            className="w-full bg-orange-500 text-white p-4 rounded-xl hover:bg-orange-600 font-semibold transition shadow-lg disabled:cursor-not-allowed disabled:bg-orange-300"
                         >
-                            Create Account
+                            {isSubmitting ? "Creating account..." : "Create Account"}
                         </button>
                     </form>
 

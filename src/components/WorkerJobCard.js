@@ -7,7 +7,6 @@ function WorkerJobCard({
     isSubmitting,
     isLiked,
     isTogglingLike,
-    isLoadingMatches,
     onApply,
     onToggleLike,
 }) {
@@ -39,15 +38,6 @@ function WorkerJobCard({
                 Match score: {matchScore != null ? `${matchScore}%` : "Loading..."}
                 {match && <span className="ml-2 text-xs font-medium text-gray-400">({matchSource})</span>}
             </p>
-            <p className="mt-2 text-xs text-gray-500">
-                {match?.explanation || (isLoadingMatches ? "Loading local AI recommendation..." : "Recommendation unavailable.")}
-            </p>
-            {match?.strengths?.length > 0 && (
-                <p className="mt-2 text-xs text-emerald-700">Strengths: {match.strengths.join(" | ")}</p>
-            )}
-            {match?.risks?.length > 0 && (
-                <p className="mt-2 text-xs text-amber-700">Watch: {match.risks.join(" | ")}</p>
-            )}
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <button

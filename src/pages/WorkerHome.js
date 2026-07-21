@@ -5,9 +5,16 @@ import WorkerHeader from "../components/WorkerHeader";
 import WorkerJobCard from "../components/WorkerJobCard";
 import api from "../api/axios";
 import {
+    getNotificationButtonLabel,
+    getNotificationPermission,
+    getNotificationPreference,
+    toggleNotificationPreference,
+} from "../api/browserNotifications";
+import {
     getSavedUser,
     isActiveWorkerSession,
     likedShiftIdsFromResponse,
+    getApiErrorMessage,
     matchesShiftSearch,
     shiftStatusClasses,
     statusClasses,
@@ -21,9 +28,10 @@ function WorkerHome() {
     const [applications, setApplications] = useState([]);
     const [matchRecommendations, setMatchRecommendations] = useState({});
     const [likedShiftIds, setLikedShiftIds] = useState(new Set());
-    const [isLoadingMatches, setIsLoadingMatches] = useState(false);
     const [submittingShiftIds, setSubmittingShiftIds] = useState([]);
     const [togglingLikeIds, setTogglingLikeIds] = useState([]);
+    const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => getNotificationPreference(user?.id));
     const [search, setSearch] = useState("");
     const [feedback, setFeedback] = useState("");
 
@@ -36,25 +44,31 @@ function WorkerHome() {
 
         const fetchDashboardData = async () => {
             try {
-                setIsLoadingMatches(true);
-                const [profileResponse, shiftsResponse, applicationsResponse, matchesResponse, likedJobsResponse] = await Promise.all([
+                const [profileResponse, shiftsResponse, applicationsResponse] = await Promise.all([
                     api.get("/users/me"),
                     api.get("/shifts"),
                     api.get("/applications"),
-                    api.get("/matches/worker/shifts"),
-                    api.get("/liked-jobs"),
                 ]);
 
                 setProfile(profileResponse.data);
                 setShifts(shiftsResponse.data);
                 setApplications(applicationsResponse.data);
-                setMatchRecommendations(Object.fromEntries(matchesResponse.data.map((match) => [match.targetId, match])));
-                setLikedShiftIds(likedShiftIdsFromResponse(likedJobsResponse.data));
+
+                const [matchesResult, likedJobsResult] = await Promise.allSettled([
+                    api.get("/matches/worker/shifts"),
+                    api.get("/liked-jobs"),
+                ]);
+
+                if (matchesResult.status === "fulfilled") {
+                    setMatchRecommendations(Object.fromEntries(matchesResult.value.data.map((match) => [match.targetId, match])));
+                }
+
+                if (likedJobsResult.status === "fulfilled") {
+                    setLikedShiftIds(likedShiftIdsFromResponse(likedJobsResult.value.data));
+                }
             } catch (error) {
                 console.error(error);
-                setFeedback("We couldn't load shifts right now. Please refresh and try again.");
-            } finally {
-                setIsLoadingMatches(false);
+                setFeedback(getApiErrorMessage(error, "We couldn't load shifts right now. Please refresh and try again."));
             }
         };
 
@@ -101,6 +115,12 @@ function WorkerHome() {
         }
     };
 
+    const handleToggleNotifications = async () => {
+        const result = await toggleNotificationPreference(user?.id);
+        setNotificationPermission(result.permission);
+        setNotificationsEnabled(result.enabled);
+    };
+
     const appliedShiftIds = new Set(applications.map((application) => application.shift?.id));
     const openShifts = shifts.filter((shift) => shift.status === "OPEN");
     const filteredShifts = openShifts
@@ -120,19 +140,16 @@ function WorkerHome() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
-            <WorkerHeader userName={profile?.name || user?.name} />
+            <WorkerHeader
+                userName={profile?.name || user?.name}
+                notificationLabel={getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
+                notificationsEnabled={notificationsEnabled}
+                onToggleNotifications={handleToggleNotifications}
+            />
 
             <div className="px-8 py-12 md:px-20">
-                <section className="mb-10 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-                    <div className="rounded-[2rem] bg-white p-8 shadow-xl">
-                        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Worker Dashboard</p>
-                        <h2 className="mt-3 text-4xl font-bold text-gray-900">Recommended shifts and active work</h2>
-                        <p className="mt-3 max-w-2xl text-gray-600">
-                            Search live openings, save jobs for later, and use AI-ranked fit signals before applying.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
+                <section className="mb-10">
+                    <div className="grid gap-4 sm:grid-cols-3">
                         <div className="rounded-[2rem] bg-white p-6 shadow-xl">
                             <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Rating</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{Number(profile?.rating || 0).toFixed(1)}</p>
@@ -185,13 +202,16 @@ function WorkerHome() {
                                         isSubmitting={submittingShiftIds.includes(shift.id)}
                                         isLiked={likedShiftIds.has(shift.id)}
                                         isTogglingLike={togglingLikeIds.includes(shift.id)}
-                                        isLoadingMatches={isLoadingMatches}
                                         onApply={handleApply}
                                         onToggleLike={handleToggleLike}
                                     />
                                 ))
                             ) : (
-                                <p className="text-gray-600">No open shifts match your search right now.</p>
+                                <p className="text-gray-600">
+                                    {search
+                                        ? "No open shifts match your search right now."
+                                        : "No open shifts are available yet. Log in as a manager to post one."}
+                                </p>
                             )}
                         </div>
                     </div>

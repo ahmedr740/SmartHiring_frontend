@@ -5,8 +5,19 @@ import WorkerHeader from "../components/WorkerHeader";
 import WorkerJobCard from "../components/WorkerJobCard";
 import api from "../api/axios";
 import {
+    getNotificationButtonLabel,
+    getNotificationPermission,
+    getNotificationPreference,
+    notifyOnce,
+    toggleNotificationPreference,
+} from "../api/browserNotifications";
+import {
+    buildWorkerReminders,
+    emptyIssueDraft,
     emptyRatingDraft,
+    getApiErrorMessage,
     getSavedUser,
+    issueStatusClasses,
     isActiveWorkerSession,
     likedShiftIdsFromResponse,
     shiftStatusClasses,
@@ -17,6 +28,7 @@ const tabs = [
     { id: "applied", label: "Applied Jobs" },
     { id: "history", label: "Job History" },
     { id: "liked", label: "Liked Jobs" },
+    { id: "issues", label: "Issue Reports" },
 ];
 
 function WorkerJobs() {
@@ -25,28 +37,36 @@ function WorkerJobs() {
     const [profile, setProfile] = useState(null);
     const [applications, setApplications] = useState([]);
     const [likedJobs, setLikedJobs] = useState([]);
+    const [issues, setIssues] = useState([]);
     const [likedShiftIds, setLikedShiftIds] = useState(new Set());
     const [activeTab, setActiveTab] = useState("applied");
     const [feedback, setFeedback] = useState("");
+    const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => getNotificationPreference(user?.id));
     const [submittingShiftIds, setSubmittingShiftIds] = useState([]);
     const [togglingLikeIds, setTogglingLikeIds] = useState([]);
     const [submittingRatingId, setSubmittingRatingId] = useState(null);
     const [ratingDrafts, setRatingDrafts] = useState({});
+    const [submittingIssueId, setSubmittingIssueId] = useState(null);
+    const [issueDrafts, setIssueDrafts] = useState({});
+    const reminders = buildWorkerReminders(applications);
 
     const loadJobs = async () => {
         try {
-            const [profileResponse, applicationsResponse, likedJobsResponse] = await Promise.all([
+            const [profileResponse, applicationsResponse, likedJobsResponse, issuesResponse] = await Promise.all([
                 api.get("/users/me"),
                 api.get("/applications"),
                 api.get("/liked-jobs"),
+                api.get("/issues"),
             ]);
             setProfile(profileResponse.data);
             setApplications(applicationsResponse.data);
             setLikedJobs(likedJobsResponse.data);
+            setIssues(issuesResponse.data);
             setLikedShiftIds(likedShiftIdsFromResponse(likedJobsResponse.data));
         } catch (error) {
             console.error(error);
-            setFeedback("We couldn't load your jobs right now.");
+            setFeedback(getApiErrorMessage(error, "We couldn't load your jobs right now."));
         }
     };
 
@@ -59,6 +79,24 @@ function WorkerJobs() {
 
         loadJobs();
     }, [navigate, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (notificationPermission === "granted" && notificationsEnabled && reminders.length > 0) {
+            notifyOnce(`worker-reminder-${reminders.join("|")}`, "Smart Hiring update", reminders[0], notificationsEnabled);
+        }
+    }, [notificationPermission, notificationsEnabled, reminders]);
+
+    useEffect(() => {
+        if (notificationPermission === "granted" && notificationsEnabled && issues.length > 0) {
+            const latestIssue = issues[0];
+            notifyOnce(
+                `worker-issue-${latestIssue.id}-${latestIssue.status}`,
+                "Issue report update",
+                `${latestIssue.shift?.title || "Your issue"} is ${latestIssue.status?.toLowerCase()}.`,
+                notificationsEnabled
+            );
+        }
+    }, [issues, notificationPermission, notificationsEnabled]);
 
     const handleApply = async (shiftId) => {
         try {
@@ -125,11 +163,53 @@ function WorkerJobs() {
                 current.map((application) => application.id === applicationId ? response.data : application)
             );
             setFeedback("Thanks. Your manager rating has been saved.");
+            notifyOnce(`worker-rating-${applicationId}`, "Rating submitted", "Your manager rating has been saved.", notificationsEnabled);
         } catch (error) {
             console.error(error);
             setFeedback(error.response?.data?.message || "We couldn't save that rating.");
         } finally {
             setSubmittingRatingId(null);
+        }
+    };
+
+    const handleToggleNotifications = async () => {
+        const result = await toggleNotificationPreference(user?.id);
+        setNotificationPermission(result.permission);
+        setNotificationsEnabled(result.enabled);
+    };
+
+    const handleIssueDraftChange = (applicationId, field, value) => {
+        setIssueDrafts((current) => ({
+            ...current,
+            [applicationId]: {
+                ...(current[applicationId] || emptyIssueDraft),
+                [field]: value,
+            },
+        }));
+    };
+
+    const handleSubmitIssue = async (application) => {
+        const draft = issueDrafts[application.id] || emptyIssueDraft;
+
+        try {
+            setFeedback("");
+            setSubmittingIssueId(application.id);
+            const response = await api.post("/issues", {
+                applicationId: application.id,
+                category: draft.category,
+                description: draft.description,
+            });
+            setIssues((current) => [response.data, ...current]);
+            setIssueDrafts((current) => ({
+                ...current,
+                [application.id]: emptyIssueDraft,
+            }));
+            setFeedback("Issue report submitted for admin review.");
+        } catch (error) {
+            console.error(error);
+            setFeedback(getApiErrorMessage(error, "We couldn't submit that issue report."));
+        } finally {
+            setSubmittingIssueId(null);
         }
     };
 
@@ -141,7 +221,12 @@ function WorkerJobs() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
-            <WorkerHeader userName={profile?.name || user?.name} />
+            <WorkerHeader
+                userName={profile?.name || user?.name}
+                notificationLabel={getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
+                notificationsEnabled={notificationsEnabled}
+                onToggleNotifications={handleToggleNotifications}
+            />
 
             <div className="px-8 py-12 md:px-20">
                 <div className="mb-8">
@@ -172,6 +257,16 @@ function WorkerJobs() {
                     </div>
                 )}
 
+                {reminders.length > 0 && (
+                    <div className="mb-8 grid gap-3 rounded-3xl border border-orange-100 bg-white p-5 shadow-lg md:grid-cols-2">
+                        {reminders.map((reminder) => (
+                            <div key={reminder} className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700">
+                                {reminder}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {activeTab === "applied" && (
                     <div className="grid gap-4 lg:grid-cols-2">
                         {appliedApplications.length > 0 ? (
@@ -194,6 +289,46 @@ function WorkerJobs() {
                                                 {application.shift?.status}
                                             </span>
                                         </div>
+                                    </div>
+                                    {application.status === "ACCEPTED" && (
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/shift-chat/${application.shift?.id}`)}
+                                            className="mt-4 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                                        >
+                                            Open shift chat
+                                        </button>
+                                    )}
+                                    <div className="mt-4 rounded-2xl bg-gray-50 p-4">
+                                        <p className="text-sm font-semibold text-gray-800">Report an issue</p>
+                                        <div className="mt-3 grid gap-3 md:grid-cols-[180px_1fr]">
+                                            <select
+                                                value={(issueDrafts[application.id] || emptyIssueDraft).category}
+                                                onChange={(event) => handleIssueDraftChange(application.id, "category", event.target.value)}
+                                                className="rounded-xl border border-orange-200 px-3 py-2"
+                                            >
+                                                <option value="GENERAL">General</option>
+                                                <option value="PAYMENT">Payment</option>
+                                                <option value="NO_SHOW">No show</option>
+                                                <option value="SAFETY">Safety</option>
+                                                <option value="OTHER">Other</option>
+                                            </select>
+                                            <input
+                                                type="text"
+                                                value={(issueDrafts[application.id] || emptyIssueDraft).description}
+                                                onChange={(event) => handleIssueDraftChange(application.id, "description", event.target.value)}
+                                                placeholder="Describe the problem for admin review"
+                                                className="rounded-xl border border-orange-200 px-3 py-2"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSubmitIssue(application)}
+                                            disabled={submittingIssueId === application.id}
+                                            className="mt-3 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
+                                        >
+                                            {submittingIssueId === application.id ? "Submitting..." : "Submit issue"}
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -225,6 +360,14 @@ function WorkerJobs() {
                                         <p className="mt-3 text-sm text-gray-600">
                                             Completed {application.shift?.completedAt ? new Date(application.shift.completedAt).toLocaleString() : "recently"}
                                         </p>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/shift-chat/${application.shift?.id}`)}
+                                            className="mt-4 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                                        >
+                                            Open shift chat
+                                        </button>
 
                                         {alreadyRated ? (
                                             <div className="mt-4 rounded-2xl bg-gray-50 p-4">
@@ -258,6 +401,24 @@ function WorkerJobs() {
                                                 </button>
                                             </div>
                                         )}
+                                        <div className="mt-4 rounded-2xl bg-gray-50 p-4">
+                                            <p className="text-sm font-semibold text-gray-800">Need admin help?</p>
+                                            <input
+                                                type="text"
+                                                value={(issueDrafts[application.id] || emptyIssueDraft).description}
+                                                onChange={(event) => handleIssueDraftChange(application.id, "description", event.target.value)}
+                                                placeholder="Describe a payment, safety, or shift issue"
+                                                className="mt-3 w-full rounded-xl border border-orange-200 px-3 py-2"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSubmitIssue(application)}
+                                                disabled={submittingIssueId === application.id}
+                                                className="mt-3 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
+                                            >
+                                                {submittingIssueId === application.id ? "Submitting..." : "Submit issue"}
+                                            </button>
+                                        </div>
                                     </div>
                                 );
                             })
@@ -279,13 +440,38 @@ function WorkerJobs() {
                                     isSubmitting={submittingShiftIds.includes(likedJob.shift?.id)}
                                     isLiked={likedShiftIds.has(likedJob.shift?.id)}
                                     isTogglingLike={togglingLikeIds.includes(likedJob.shift?.id)}
-                                    isLoadingMatches={false}
                                     onApply={handleApply}
                                     onToggleLike={handleToggleLike}
                                 />
                             ))
                         ) : (
                             <p className="text-gray-600">Liked jobs will appear here when you save them.</p>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === "issues" && (
+                    <div className="grid gap-5 lg:grid-cols-2">
+                        {issues.length > 0 ? (
+                            issues.map((issue) => (
+                                <div key={issue.id} className="rounded-3xl border border-gray-100 bg-white p-5 shadow-lg">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-lg font-semibold text-gray-900">{issue.shift?.title || "Reported issue"}</p>
+                                            <p className="text-sm text-gray-500">{issue.category || "GENERAL"}</p>
+                                        </div>
+                                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${issueStatusClasses[issue.status] || "bg-gray-100 text-gray-700"}`}>
+                                            {issue.status}
+                                        </span>
+                                    </div>
+                                    <p className="mt-3 text-sm text-gray-600">{issue.description}</p>
+                                    <p className="mt-3 text-xs text-gray-400">
+                                        Submitted {issue.createdAt ? new Date(issue.createdAt).toLocaleString() : "recently"}
+                                    </p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-600">Issue reports you submit will appear here.</p>
                         )}
                     </div>
                 )}

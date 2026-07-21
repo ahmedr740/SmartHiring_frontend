@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import NotificationBell from "./NotificationBell";
 
 const navItems = [
     { to: "/worker-home", label: "Home" },
@@ -7,7 +8,7 @@ const navItems = [
     { to: "/worker-profile", label: "Profile" },
 ];
 
-function WorkerHeader({ userName }) {
+function WorkerHeader({ userName, notificationLabel, notificationsEnabled, onToggleNotifications }) {
     const navigate = useNavigate();
     const currentPath = window.location.pathname;
 
@@ -42,6 +43,22 @@ function WorkerHeader({ userName }) {
                     </button>
                     );
                 })}
+
+                {onToggleNotifications && (
+                    <button
+                        type="button"
+                        onClick={onToggleNotifications}
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            notificationsEnabled
+                                ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
+                                : "border border-orange-200 text-orange-700 hover:bg-orange-50"
+                        }`}
+                    >
+                        {notificationLabel || "Notifications Off"}
+                    </button>
+                )}
+
+                <NotificationBell />
 
                 <button
                     type="button"

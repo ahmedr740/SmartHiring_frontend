@@ -1,7 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { matchSourceLabel } from "./workerUtils";
+import NotificationBell from "../components/NotificationBell";
+import {
+    getNotificationButtonLabel,
+    getNotificationPermission,
+    getNotificationPreference,
+    notifyOnce,
+    toggleNotificationPreference,
+} from "../api/browserNotifications";
+import {
+    buildManagerReminders,
+    emptyIssueDraft,
+    getApiErrorMessage,
+    issueStatusClasses,
+    matchSourceLabel,
+} from "./workerUtils";
 
 const applicationStatusClasses = {
     PENDING: "bg-amber-100 text-amber-700",
@@ -17,9 +31,17 @@ const shiftStatusClasses = {
     CANCELLED: "bg-rose-100 text-rose-700",
 };
 
-const emptyRatingDraft = { rating: "5", review: "" };
+const managerTabs = [
+    { id: "posted", label: "Posted Shifts" },
+    { id: "applications", label: "Applications" },
+    { id: "active", label: "Active Shifts" },
+    { id: "completed", label: "Completed Shifts" },
+];
 
+const emptyRatingDraft = { rating: "5", review: "" };
 const getSavedUser = () => JSON.parse(localStorage.getItem("user") || "null");
+
+const normalizeStatus = (status) => (status || "").trim().toUpperCase();
 
 const createEmptyShiftDraft = () => ({
     title: "",
@@ -29,16 +51,6 @@ const createEmptyShiftDraft = () => ({
     pay: "",
     roleNeeded: "",
     location: "",
-});
-
-const createShiftPayload = (values) => ({
-    title: values.title,
-    date: values.date,
-    startTime: values.startTime,
-    endTime: values.endTime,
-    pay: values.pay,
-    roleNeeded: values.roleNeeded,
-    location: values.location,
 });
 
 const buildShiftDraftFromShift = (shift) => ({
@@ -70,8 +82,6 @@ const getWorkerMatchScore = (shift, worker) => {
 };
 
 function ManagerHome() {
-    // Posting and moderation both stayed in this page because we were still
-    // adjusting the manager flow pretty late in the project.
     const navigate = useNavigate();
     const user = getSavedUser();
     const userId = user?.id;
@@ -81,20 +91,26 @@ function ManagerHome() {
     const [profile, setProfile] = useState(null);
     const [shifts, setShifts] = useState([]);
     const [applications, setApplications] = useState([]);
-    const [title, setTitle] = useState("");
-    const [date, setDate] = useState("");
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
-    const [pay, setPay] = useState("");
-    const [roleNeeded, setRoleNeeded] = useState("");
-    const [location, setLocation] = useState("");
+    const [issues, setIssues] = useState([]);
+    const [activeTab, setActiveTab] = useState("posted");
     const [feedback, setFeedback] = useState("");
     const [busyKey, setBusyKey] = useState("");
+    const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => getNotificationPreference(userId));
     const [ratingDrafts, setRatingDrafts] = useState({});
+    const [issueDrafts, setIssueDrafts] = useState({});
+    const [submittingIssueId, setSubmittingIssueId] = useState(null);
     const [editingShiftId, setEditingShiftId] = useState(null);
     const [shiftDraft, setShiftDraft] = useState(createEmptyShiftDraft());
     const [applicantMatches, setApplicantMatches] = useState({});
     const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+    const [paymentShift, setPaymentShift] = useState(null);
+
+    const openShiftCount = shifts.filter((shift) => normalizeStatus(shift.status) === "OPEN").length;
+    const activeShiftCount = shifts.filter((shift) => ["FILLED", "IN_PROGRESS"].includes(normalizeStatus(shift.status))).length;
+    const completedShiftCount = shifts.filter((shift) => normalizeStatus(shift.status) === "COMPLETED").length;
+    const pendingApplicationCount = applications.filter((application) => normalizeStatus(application.status) === "PENDING").length;
+    const reminders = buildManagerReminders(shifts, applications);
 
     const loadDashboardData = async () => {
         try {
@@ -107,6 +123,11 @@ function ManagerHome() {
             setProfile(profileResponse.data);
             setShifts(shiftsResponse.data);
             setApplications(applicationsResponse.data);
+
+            const issuesResult = await Promise.allSettled([api.get("/issues")]);
+            if (issuesResult[0].status === "fulfilled") {
+                setIssues(issuesResult[0].value.data);
+            }
 
             const matchResults = await Promise.allSettled(
                 shiftsResponse.data.map((shift) => api.get(`/matches/manager/shifts/${shift.id}/applicants`))
@@ -122,7 +143,7 @@ function ManagerHome() {
             setApplicantMatches(nextMatches);
         } catch (error) {
             console.error(error);
-            setFeedback("We couldn't load your dashboard right now. Please refresh and try again.");
+            setFeedback(getApiErrorMessage(error, "We couldn't load your dashboard right now. Please refresh and try again."));
         } finally {
             setIsLoadingMatches(false);
         }
@@ -141,37 +162,13 @@ function ManagerHome() {
         }
 
         loadDashboardData();
-    }, [navigate, userId, userRole, userStatus]);
+    }, [navigate, userId, userRole, userStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleCreateShift = async (e) => {
-        e.preventDefault();
-
-        try {
-            setFeedback("");
-            const response = await api.post("/shifts", createShiftPayload({
-                title,
-                date,
-                startTime,
-                endTime,
-                pay,
-                roleNeeded,
-                location,
-            }));
-
-            setTitle("");
-            setDate("");
-            setStartTime("");
-            setEndTime("");
-            setPay("");
-            setRoleNeeded("");
-            setLocation("");
-            setShifts((current) => [...current, response.data]);
-            setFeedback("Shift posted successfully.");
-        } catch (error) {
-            console.error(error);
-            setFeedback(error.response?.data?.message || "We couldn't post that shift. Please try again.");
+    useEffect(() => {
+        if (notificationPermission === "granted" && notificationsEnabled && reminders.length > 0) {
+            notifyOnce(`manager-reminder-${reminders.join("|")}`, "Smart Hiring update", reminders[0], notificationsEnabled);
         }
-    };
+    }, [notificationPermission, notificationsEnabled, reminders]);
 
     const runRefreshAction = async (key, action, successMessage) => {
         try {
@@ -182,7 +179,7 @@ function ManagerHome() {
             setFeedback(successMessage);
         } catch (error) {
             console.error(error);
-            setFeedback(error.response?.data?.message || "We couldn't complete that action right now.");
+            setFeedback(getApiErrorMessage(error, "We couldn't complete that action right now."));
         } finally {
             setBusyKey("");
         }
@@ -194,6 +191,12 @@ function ManagerHome() {
             () => api.put(`/applications/${applicationId}/status`, { status }),
             `Application ${status.toLowerCase()} successfully.`
         );
+        notifyOnce(
+            `manager-application-${applicationId}-${status}`,
+            "Application updated",
+            `Application ${status.toLowerCase()} successfully.`,
+            notificationsEnabled
+        );
     };
 
     const handleShiftStatus = async (shiftId, status) => {
@@ -202,14 +205,42 @@ function ManagerHome() {
             () => api.put(`/shifts/${shiftId}/status`, { status }),
             `Shift moved to ${status}.`
         );
+        notifyOnce(
+            `manager-shift-${shiftId}-${status}`,
+            "Shift status updated",
+            `Shift moved to ${status}.`,
+            notificationsEnabled
+        );
     };
 
-    const handleMarkPaid = async (shiftId) => {
+    const handleStartPayment = async (shift) => {
+        try {
+            setFeedback("");
+            setBusyKey(`shift-payment-start-${shift.id}`);
+            const response = await api.post(`/payments/shifts/${shift.id}/start`);
+            setPaymentShift({ ...shift, mockPayment: response.data });
+        } catch (error) {
+            console.error(error);
+            setFeedback(getApiErrorMessage(error, "We couldn't start the payment."));
+        } finally {
+            setBusyKey("");
+        }
+    };
+
+    const handleConfirmPayment = async () => {
+        if (!paymentShift?.mockPayment?.id) {
+            return;
+        }
+
         await runRefreshAction(
-            `shift-paid-${shiftId}`,
-            () => api.put(`/shifts/${shiftId}/payment`),
-            "Shift marked as paid."
+            `payment-confirm-${paymentShift.mockPayment.id}`,
+            () => api.post(`/payments/${paymentShift.mockPayment.id}/confirm`, {
+                methodLabel: "Demo card ending 4242",
+            }),
+            "Payment completed and shift marked as paid."
         );
+        notifyOnce(`manager-payment-${paymentShift.id}`, "Payment completed", `${paymentShift.title} is now paid.`, notificationsEnabled);
+        setPaymentShift(null);
     };
 
     const handleDeleteShift = async (shiftId) => {
@@ -265,79 +296,554 @@ function ManagerHome() {
         );
     };
 
+    const handleIssueDraftChange = (shiftId, field, value) => {
+        setIssueDrafts((current) => ({
+            ...current,
+            [shiftId]: {
+                ...(current[shiftId] || emptyIssueDraft),
+                [field]: value,
+            },
+        }));
+    };
+
+    const handleSubmitIssue = async (shift) => {
+        const draft = issueDrafts[shift.id] || emptyIssueDraft;
+
+        try {
+            setFeedback("");
+            setSubmittingIssueId(shift.id);
+            const response = await api.post("/issues", {
+                shiftId: shift.id,
+                category: draft.category,
+                description: draft.description,
+            });
+            setIssues((current) => [response.data, ...current]);
+            setIssueDrafts((current) => ({
+                ...current,
+                [shift.id]: emptyIssueDraft,
+            }));
+            setFeedback("Issue report submitted for admin review.");
+        } catch (error) {
+            console.error(error);
+            setFeedback(getApiErrorMessage(error, "We couldn't submit that issue report."));
+        } finally {
+            setSubmittingIssueId(null);
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem("user");
         navigate("/login");
     };
 
+    const handleToggleNotifications = async () => {
+        const result = await toggleNotificationPreference(userId);
+        setNotificationPermission(result.permission);
+        setNotificationsEnabled(result.enabled);
+    };
+
     const getApplicationsForShift = (shiftId) =>
         applications.filter((application) => application.shift?.id === shiftId);
 
+    const getVisibleApplicationsForShift = (shiftId) =>
+        getApplicationsForShift(shiftId).filter((application) => normalizeStatus(application.status) !== "REJECTED");
+
+    const getAcceptedApplication = (shift) =>
+        getApplicationsForShift(shift.id).find((application) => normalizeStatus(application.status) === "ACCEPTED");
+
     const getLifecycleActions = (shift) => {
-        if (shift.status === "FILLED") {
+        const status = normalizeStatus(shift.status);
+
+        if (status === "FILLED") {
             return [
                 { label: "Start shift", status: "IN_PROGRESS" },
                 { label: "Cancel shift", status: "CANCELLED" },
             ];
         }
 
-        if (shift.status === "IN_PROGRESS") {
+        if (status === "IN_PROGRESS") {
             return [{ label: "Complete shift", status: "COMPLETED" }];
         }
 
-        if (shift.status === "OPEN") {
+        if (status === "OPEN") {
             return [{ label: "Cancel shift", status: "CANCELLED" }];
         }
 
         return [];
     };
 
-    const canEditShift = (shift) => !["IN_PROGRESS", "COMPLETED"].includes(shift.status);
+    const postedShifts = shifts.filter((shift) => ["OPEN", "CANCELLED"].includes(normalizeStatus(shift.status)));
+    const applicationShifts = shifts.filter((shift) =>
+        normalizeStatus(shift.status) === "OPEN" &&
+        getVisibleApplicationsForShift(shift.id).length > 0
+    );
+    const activeShifts = shifts.filter((shift) => ["FILLED", "IN_PROGRESS"].includes(normalizeStatus(shift.status)));
+    const completedShifts = shifts.filter((shift) => normalizeStatus(shift.status) === "COMPLETED");
 
-    const openShiftCount = shifts.filter((shift) => shift.status === "OPEN").length;
-    const activeShiftCount = shifts.filter((shift) => ["FILLED", "IN_PROGRESS"].includes(shift.status)).length;
-    const completedShiftCount = shifts.filter((shift) => shift.status === "COMPLETED").length;
+    const renderShiftSummary = (shift) => (
+        <div>
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h4 className="text-2xl font-semibold text-gray-900">{shift.title}</h4>
+                    <p className="mt-1 text-sm text-gray-500">{shift.roleNeeded} | {shift.location}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${shiftStatusClasses[shift.status] || "bg-gray-100 text-gray-700"}`}>
+                    {shift.status}
+                </span>
+            </div>
+            <div className="mt-4 grid gap-3 text-sm text-gray-600 sm:grid-cols-3">
+                <p>{shift.date}</p>
+                <p>{shift.startTime} - {shift.endTime}</p>
+                <p>${Number(shift.pay || 0).toFixed(2)}/hr</p>
+            </div>
+        </div>
+    );
+
+    const renderShiftEditForm = (shift) => (
+        <div className="space-y-4 rounded-3xl border border-orange-100 bg-orange-50/60 p-4">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h4 className="text-2xl font-semibold text-gray-800">Edit Shift</h4>
+                    <p className="mt-1 text-sm text-gray-500">Update the listing before the shift starts.</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${shiftStatusClasses[shift.status] || "bg-gray-100 text-gray-700"}`}>
+                    {shift.status}
+                </span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+                {[
+                    ["title", "text"],
+                    ["date", "date"],
+                    ["startTime", "time"],
+                    ["endTime", "time"],
+                    ["pay", "number"],
+                    ["roleNeeded", "text"],
+                    ["location", "text"],
+                ].map(([field, type]) => (
+                    <input
+                        key={field}
+                        type={type}
+                        value={shiftDraft[field]}
+                        onChange={(event) => handleShiftDraftChange(field, event.target.value)}
+                        className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                ))}
+            </div>
+            <div className="flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    onClick={() => handleSaveShiftEdit(shift.id)}
+                    disabled={busyKey === `shift-edit-${shift.id}`}
+                    className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                >
+                    {busyKey === `shift-edit-${shift.id}` ? "Saving..." : "Save changes"}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setEditingShiftId(null)}
+                    className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderIssuePanel = (shift) => (
+        <div className="rounded-3xl border border-orange-100 bg-orange-50/50 p-4">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <p className="text-sm font-semibold text-gray-800">Issue reports</p>
+                    <p className="text-xs text-gray-500">Submit or track admin help for this shift.</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-orange-700">
+                    {issues.filter((issue) => issue.shift?.id === shift.id).length}
+                </span>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-[160px_1fr]">
+                <select
+                    value={(issueDrafts[shift.id] || emptyIssueDraft).category}
+                    onChange={(event) => handleIssueDraftChange(shift.id, "category", event.target.value)}
+                    className="rounded-xl border border-orange-200 px-3 py-2"
+                >
+                    <option value="GENERAL">General</option>
+                    <option value="PAYMENT">Payment</option>
+                    <option value="NO_SHOW">No show</option>
+                    <option value="SAFETY">Safety</option>
+                    <option value="QUALITY">Quality</option>
+                    <option value="OTHER">Other</option>
+                </select>
+                <input
+                    type="text"
+                    value={(issueDrafts[shift.id] || emptyIssueDraft).description}
+                    onChange={(event) => handleIssueDraftChange(shift.id, "description", event.target.value)}
+                    placeholder="Describe the issue for admin review"
+                    className="rounded-xl border border-orange-200 px-3 py-2"
+                />
+            </div>
+            <button
+                type="button"
+                onClick={() => handleSubmitIssue(shift)}
+                disabled={submittingIssueId === shift.id}
+                className="mt-3 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
+            >
+                {submittingIssueId === shift.id ? "Submitting..." : "Submit issue"}
+            </button>
+            {issues.filter((issue) => issue.shift?.id === shift.id).length > 0 && (
+                <div className="mt-4 space-y-2">
+                    {issues.filter((issue) => issue.shift?.id === shift.id).map((issue) => (
+                        <div key={issue.id} className="rounded-2xl bg-white px-4 py-3 text-sm">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-medium text-gray-800">{issue.category || "GENERAL"}</span>
+                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${issueStatusClasses[issue.status] || "bg-gray-100 text-gray-700"}`}>
+                                    {issue.status}
+                                </span>
+                            </div>
+                            <p className="mt-2 text-gray-600">{issue.description}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+
+    const renderApplicantCard = (shift, application) => {
+        const isBusy = busyKey.startsWith(`application-${application.id}-`);
+        const match = applicantMatches[application.id];
+        const matchScore = match?.aiScore ?? match?.fallbackScore ?? getWorkerMatchScore(shift, application.worker);
+        const matchSource = matchSourceLabel(match?.source);
+
+        return (
+            <div key={application.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                        <p className="font-semibold text-gray-800">{application.worker?.name || "Applicant"}</p>
+                        <p className="text-sm text-gray-500">{application.worker?.email}</p>
+                        <p className="mt-1 text-xs text-gray-500">Skills: {application.worker?.skills || "No skills listed"}</p>
+                        <p className="mt-1 text-xs text-gray-500">Location: {application.worker?.location || "No location listed"}</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Rating {Number(application.worker?.rating || 0).toFixed(1)} | {application.worker?.completedShiftsCount || 0} completed | Match {matchScore}% ({matchSource})
+                        </p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${applicationStatusClasses[application.status] || "bg-gray-100 text-gray-700"}`}>
+                        {application.status}
+                    </span>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(application.id, "ACCEPTED")}
+                        disabled={isBusy || application.status === "ACCEPTED" || shift.status !== "OPEN"}
+                        className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            isBusy || application.status === "ACCEPTED" || shift.status !== "OPEN"
+                                ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                                : "bg-emerald-500 text-white hover:bg-emerald-600"
+                        }`}
+                    >
+                        {busyKey === `application-${application.id}-ACCEPTED`
+                            ? "Accepting..."
+                            : application.status === "ACCEPTED" ? "Accepted" : "Accept"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(application.id, "REJECTED")}
+                        disabled={isBusy || application.status === "REJECTED"}
+                        className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            isBusy || application.status === "REJECTED"
+                                ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                                : "bg-rose-500 text-white hover:bg-rose-600"
+                        }`}
+                    >
+                        {busyKey === `application-${application.id}-REJECTED`
+                            ? "Rejecting..."
+                            : application.status === "REJECTED" ? "Rejected" : "Reject"}
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const renderAssignedWorker = (shift, acceptedApplication) => {
+        if (!acceptedApplication) {
+            return null;
+        }
+
+        const match = applicantMatches[acceptedApplication.id];
+        const score = match?.aiScore ?? match?.fallbackScore ?? getWorkerMatchScore(shift, acceptedApplication.worker);
+
+        return (
+            <div className="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4">
+                <p className="text-sm uppercase tracking-[0.2em] text-emerald-600">Assigned worker</p>
+                <div className="mt-3 flex items-start justify-between gap-3">
+                    <div>
+                        <p className="font-semibold text-gray-900">{acceptedApplication.worker?.name}</p>
+                        <p className="text-sm text-gray-500">{acceptedApplication.worker?.email}</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                            Rating {Number(acceptedApplication.worker?.rating || 0).toFixed(1)} | {acceptedApplication.worker?.completedShiftsCount || 0} completed shifts
+                        </p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
+                        Match {score}% {matchSourceLabel(match?.source)}
+                    </span>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => navigate(`/shift-chat/${shift.id}`)}
+                    className="mt-4 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                >
+                    Open shift chat
+                </button>
+            </div>
+        );
+    };
+
+    const renderRatingPanel = (acceptedApplication) => {
+        if (!acceptedApplication) {
+            return null;
+        }
+
+        if (acceptedApplication.workerRating != null) {
+            return (
+                <div className="rounded-2xl bg-white p-4">
+                    <p className="text-sm font-semibold text-gray-800">You rated this worker {acceptedApplication.workerRating}/5</p>
+                    <p className="mt-1 text-sm text-gray-500">{acceptedApplication.workerReview || "No written review added."}</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-3 rounded-2xl bg-white p-4">
+                <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700" htmlFor={`worker-rating-${acceptedApplication.id}`}>
+                        Rate worker
+                    </label>
+                    <select
+                        id={`worker-rating-${acceptedApplication.id}`}
+                        value={(ratingDrafts[acceptedApplication.id] || emptyRatingDraft).rating}
+                        onChange={(event) => handleRatingDraftChange(acceptedApplication.id, "rating", event.target.value)}
+                        className="rounded-xl border border-orange-200 px-3 py-2"
+                    >
+                        {[5, 4, 3, 2, 1].map((value) => (
+                            <option key={value} value={value}>{value}</option>
+                        ))}
+                    </select>
+                </div>
+                <textarea
+                    value={(ratingDrafts[acceptedApplication.id] || emptyRatingDraft).review}
+                    onChange={(event) => handleRatingDraftChange(acceptedApplication.id, "review", event.target.value)}
+                    placeholder="Share how the worker performed"
+                    className="min-h-[96px] w-full rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+                <button
+                    type="button"
+                    onClick={() => handleSubmitWorkerRating(acceptedApplication.id)}
+                    disabled={busyKey === `rating-${acceptedApplication.id}`}
+                    className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                >
+                    {busyKey === `rating-${acceptedApplication.id}` ? "Saving..." : "Submit rating"}
+                </button>
+            </div>
+        );
+    };
+
+    const renderEmpty = (message) => (
+        <div className="rounded-3xl bg-white p-8 text-gray-600 shadow-lg">
+            {message}
+        </div>
+    );
+
+    const renderPostedSection = () => (
+        <div className="grid gap-6 xl:grid-cols-2">
+            {postedShifts.length > 0 ? postedShifts.map((shift) => (
+                <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                    {editingShiftId === shift.id ? renderShiftEditForm(shift) : renderShiftSummary(shift)}
+                    {editingShiftId !== shift.id && shift.status === "OPEN" && (
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={() => handleStartEditingShift(shift)}
+                                className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                            >
+                                Edit shift
+                            </button>
+                            {getLifecycleActions(shift).map((action) => (
+                                <button
+                                    key={action.status}
+                                    type="button"
+                                    onClick={() => handleShiftStatus(shift.id, action.status)}
+                                    disabled={busyKey === `shift-${shift.id}-${action.status}`}
+                                    className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {busyKey === `shift-${shift.id}-${action.status}` ? "Working..." : action.label}
+                                </button>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={() => handleDeleteShift(shift.id)}
+                                disabled={busyKey === `shift-delete-${shift.id}`}
+                                className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {busyKey === `shift-delete-${shift.id}` ? "Deleting..." : "Delete shift"}
+                            </button>
+                        </div>
+                    )}
+                </article>
+            )) : renderEmpty("No posted shifts to show. Use Post New Shift to create one.")}
+        </div>
+    );
+
+    const renderApplicationsSection = () => (
+        <div className="grid gap-6 xl:grid-cols-2">
+                {applicationShifts.length > 0 ? applicationShifts.map((shift) => {
+                const shiftApplications = getVisibleApplicationsForShift(shift.id);
+                return (
+                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                        {renderShiftSummary(shift)}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <h5 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Applicants</h5>
+                                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                                    {shiftApplications.length}
+                                </span>
+                            </div>
+                            {shiftApplications.map((application) => renderApplicantCard(shift, application))}
+                        </div>
+                    </article>
+                );
+                }) : renderEmpty("Applications will appear here when workers apply for your shifts.")}
+        </div>
+    );
+
+    const renderActiveSection = () => (
+        <div className="grid gap-6 xl:grid-cols-2">
+            {activeShifts.length > 0 ? activeShifts.map((shift) => {
+                const acceptedApplication = getAcceptedApplication(shift);
+                return (
+                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                        {renderShiftSummary(shift)}
+                        {renderAssignedWorker(shift, acceptedApplication)}
+                        <div className="flex flex-wrap gap-3">
+                            {getLifecycleActions(shift).map((action) => (
+                                <button
+                                    key={action.status}
+                                    type="button"
+                                    onClick={() => handleShiftStatus(shift.id, action.status)}
+                                    disabled={busyKey === `shift-${shift.id}-${action.status}`}
+                                    className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {busyKey === `shift-${shift.id}-${action.status}` ? "Working..." : action.label}
+                                </button>
+                            ))}
+                        </div>
+                    </article>
+                );
+            }) : renderEmpty("No active shifts right now. Accepted shifts will appear here.")}
+        </div>
+    );
+
+    const renderCompletedSection = () => (
+        <div className="grid gap-6 xl:grid-cols-2">
+            {completedShifts.length > 0 ? completedShifts.map((shift) => {
+                const acceptedApplication = getAcceptedApplication(shift);
+                return (
+                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                        {renderShiftSummary(shift)}
+                        {renderAssignedWorker(shift, acceptedApplication)}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {shift.paid ? (
+                                <span className="rounded-xl bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">Paid</span>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => handleStartPayment(shift)}
+                                    disabled={busyKey === `shift-payment-start-${shift.id}`}
+                                    className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                                >
+                                    {busyKey === `shift-payment-start-${shift.id}` ? "Opening..." : "Pay Worker"}
+                                </button>
+                            )}
+                            <span className="text-sm text-gray-500">
+                                Completed {shift.completedAt ? new Date(shift.completedAt).toLocaleString() : "recently"}
+                            </span>
+                        </div>
+                        {renderRatingPanel(acceptedApplication)}
+                        {renderIssuePanel(shift)}
+                    </article>
+                );
+            }) : renderEmpty("Completed shifts will appear here after work is finished.")}
+        </div>
+    );
+
+    const renderActiveTab = () => {
+        if (activeTab === "applications") {
+            return renderApplicationsSection();
+        }
+
+        if (activeTab === "active") {
+            return renderActiveSection();
+        }
+
+        if (activeTab === "completed") {
+            return renderCompletedSection();
+        }
+
+        return renderPostedSection();
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
-            <div className="flex justify-between items-center px-8 md:px-20 py-6 bg-white shadow-sm">
+            <div className="flex flex-col gap-4 bg-white px-8 py-6 shadow-sm md:flex-row md:items-center md:justify-between md:px-20">
                 <h1 className="text-2xl font-bold text-orange-600">Smart Hiring</h1>
 
-                <div className="flex items-center gap-6">
-                    <span className="text-gray-600 font-medium">Welcome, {profile?.name || user?.name}</span>
-
+                <div className="flex flex-wrap items-center gap-3 md:gap-6">
+                    <span className="font-medium text-gray-600">Welcome, {profile?.name || user?.name}</span>
                     <button
+                        type="button"
+                        onClick={() => navigate("/manager-post-shift")}
+                        className="rounded-xl bg-orange-500 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                    >
+                        Post New Shift
+                    </button>
+                    <NotificationBell />
+                    <button
+                        type="button"
+                        onClick={handleToggleNotifications}
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            notificationsEnabled
+                                ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
+                                : "border border-orange-200 text-orange-700 hover:bg-orange-50"
+                        }`}
+                    >
+                        {getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
+                    </button>
+                    <button
+                        type="button"
                         onClick={handleLogout}
-                        className="border border-orange-500 text-orange-600 px-4 py-2 rounded-xl hover:bg-orange-500 hover:text-white transition"
+                        className="rounded-xl border border-orange-500 px-4 py-2 text-sm font-semibold text-orange-600 transition hover:bg-orange-500 hover:text-white"
                     >
                         Logout
                     </button>
                 </div>
             </div>
 
-            <div className="px-8 md:px-20 py-12 space-y-12">
-                <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-                    <div className="rounded-[2rem] bg-white p-8 shadow-xl">
-                        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Manager Dashboard</p>
-                        <h2 className="mt-3 text-4xl font-bold text-gray-900">Run the full shift lifecycle from one place</h2>
-                        <p className="mt-3 max-w-2xl text-gray-600">
-                            Post shifts, accept the best-fit worker, move the shift through completion, mark payment, and leave a rating after the work is done.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="space-y-10 px-8 py-12 md:px-20">
+                <section>
+                    <div className="grid gap-4 sm:grid-cols-4">
                         <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Open shifts</p>
+                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Open</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{openShiftCount}</p>
                         </div>
                         <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Active shifts</p>
+                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Applications</p>
+                            <p className="mt-3 text-4xl font-bold text-gray-900">{pendingApplicationCount}</p>
+                        </div>
+                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
+                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Active</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{activeShiftCount}</p>
                         </div>
                         <div className="rounded-[2rem] bg-white p-6 shadow-xl">
                             <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Completed</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{completedShiftCount}</p>
-                            <p className="mt-2 text-sm text-gray-500">{profile?.completedShiftsCount || 0} total finished on your account</p>
                         </div>
                     </div>
                 </section>
@@ -348,393 +854,90 @@ function ManagerHome() {
                     </div>
                 )}
 
-                <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-5xl">
-                    <h3 className="text-2xl font-semibold text-gray-800 mb-8">Post New Shift</h3>
-
-                    <form onSubmit={handleCreateShift} className="grid md:grid-cols-2 gap-6">
-                        <input
-                            type="text"
-                            placeholder="Shift Title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="p-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            required
-                        />
-
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            className="p-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            required
-                        />
-
-                        <input
-                            type="time"
-                            value={startTime}
-                            onChange={(e) => setStartTime(e.target.value)}
-                            className="p-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            required
-                        />
-
-                        <input
-                            type="time"
-                            value={endTime}
-                            onChange={(e) => setEndTime(e.target.value)}
-                            className="p-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            required
-                        />
-
-                        <input
-                            type="number"
-                            placeholder="Pay per hour ($)"
-                            value={pay}
-                            onChange={(e) => setPay(e.target.value)}
-                            className="p-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            required
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Location"
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            className="p-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            required
-                        />
-
-                        <select
-                            value={roleNeeded}
-                            onChange={(e) => setRoleNeeded(e.target.value)}
-                            className="p-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            required
-                        >
-                            <option value="">Select Role Needed</option>
-                            <option value="WAITER">Waiter</option>
-                            <option value="CHEF">Chef</option>
-                            <option value="BARISTA">Barista</option>
-                            <option value="CASHIER">Cashier</option>
-                            <option value="KITCHEN HELPER">Kitchen Helper</option>
-                        </select>
-
-                        <button
-                            type="submit"
-                            className="md:col-span-2 bg-orange-500 text-white p-4 rounded-xl hover:bg-orange-600 font-semibold transition shadow-lg"
-                        >
-                            Post Shift
-                        </button>
-                    </form>
+                <div className="max-w-4xl rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                    AI applicant scores are advisory. Always review the applicant's relevant experience and availability before deciding.
                 </div>
 
+                {isLoadingMatches && (
+                    <div className="max-w-4xl rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 shadow-sm">
+                        Refreshing dashboard and applicant matches...
+                    </div>
+                )}
+
+                {reminders.length > 0 && (
+                    <div className="grid gap-3 rounded-3xl border border-orange-100 bg-white p-5 shadow-lg md:grid-cols-3">
+                        {reminders.map((reminder) => (
+                            <div key={reminder} className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700">
+                                {reminder}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <section>
-                    <div className="mb-8">
-                        <h3 className="text-3xl font-bold text-gray-900">Your Posted Shifts</h3>
-                        <p className="mt-2 text-gray-600">Review candidates, manage live staffing, and close the loop with payment and ratings.</p>
+                    <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                        <h3 className="text-3xl font-bold text-gray-900">Shift Management</h3>
+                        <div className="flex flex-wrap gap-3">
+                            {managerTabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                                        activeTab === tab.id
+                                            ? "bg-orange-500 text-white shadow-md"
+                                            : "border border-orange-200 bg-white text-orange-600 hover:bg-orange-50"
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-
-                    <div className="grid gap-8 xl:grid-cols-2">
-                        {shifts.map((shift) => {
-                            const shiftApplications = getApplicationsForShift(shift.id);
-                            const acceptedApplication = shiftApplications.find((application) => application.status === "ACCEPTED");
-
-                            return (
-                                <div key={shift.id} className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-                                    {editingShiftId === shift.id ? (
-                                        <div className="mb-5 space-y-4 rounded-3xl border border-orange-100 bg-orange-50/60 p-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <h4 className="text-2xl font-semibold text-gray-800">Edit Shift</h4>
-                                                    <p className="mt-1 text-sm text-gray-500">Update the listing before the shift starts.</p>
-                                                </div>
-                                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${shiftStatusClasses[shift.status] || "bg-gray-100 text-gray-700"}`}>
-                                                    {shift.status}
-                                                </span>
-                                            </div>
-
-                                            <div className="grid gap-4 md:grid-cols-2">
-                                                <input
-                                                    type="text"
-                                                    value={shiftDraft.title}
-                                                    onChange={(event) => handleShiftDraftChange("title", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                />
-                                                <input
-                                                    type="date"
-                                                    value={shiftDraft.date}
-                                                    onChange={(event) => handleShiftDraftChange("date", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                />
-                                                <input
-                                                    type="time"
-                                                    value={shiftDraft.startTime}
-                                                    onChange={(event) => handleShiftDraftChange("startTime", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                />
-                                                <input
-                                                    type="time"
-                                                    value={shiftDraft.endTime}
-                                                    onChange={(event) => handleShiftDraftChange("endTime", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                />
-                                                <input
-                                                    type="number"
-                                                    value={shiftDraft.pay}
-                                                    onChange={(event) => handleShiftDraftChange("pay", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    value={shiftDraft.location}
-                                                    onChange={(event) => handleShiftDraftChange("location", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                />
-                                                <select
-                                                    value={shiftDraft.roleNeeded}
-                                                    onChange={(event) => handleShiftDraftChange("roleNeeded", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                >
-                                                    <option value="WAITER">Waiter</option>
-                                                    <option value="CHEF">Chef</option>
-                                                    <option value="BARISTA">Barista</option>
-                                                    <option value="CASHIER">Cashier</option>
-                                                    <option value="KITCHEN HELPER">Kitchen Helper</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="flex gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSaveShiftEdit(shift.id)}
-                                                    disabled={busyKey === `shift-edit-${shift.id}`}
-                                                    className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
-                                                >
-                                                    {busyKey === `shift-edit-${shift.id}` ? "Saving..." : "Save changes"}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setEditingShiftId(null)}
-                                                    className="rounded-xl border border-orange-200 px-4 py-3 text-sm font-semibold text-orange-700 hover:bg-orange-50"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="mb-5 flex items-start justify-between gap-4">
-                                            <div>
-                                                <h4 className="text-2xl font-semibold text-gray-800">{shift.title}</h4>
-                                                <p className="mt-1 text-sm text-gray-500">{shift.date} • {shift.startTime} - {shift.endTime}</p>
-                                                <p className="mt-1 text-sm text-gray-500">{shift.location}</p>
-                                                <p className="mt-3 text-gray-700 font-medium">💰 ${shift.pay}/hr • {shift.roleNeeded}</p>
-                                            </div>
-
-                                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${shiftStatusClasses[shift.status] || "bg-gray-100 text-gray-700"}`}>
-                                                {shift.status}
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    <div className="mb-5 flex flex-wrap gap-3">
-                                        {canEditShift(shift) && editingShiftId !== shift.id && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleStartEditingShift(shift)}
-                                                className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
-                                            >
-                                                Edit shift
-                                            </button>
-                                        )}
-                                        {getLifecycleActions(shift).map((action) => (
-                                            <button
-                                                key={action.status}
-                                                type="button"
-                                                onClick={() => handleShiftStatus(shift.id, action.status)}
-                                                disabled={busyKey === `shift-${shift.id}-${action.status}`}
-                                                className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                            >
-                                                {busyKey === `shift-${shift.id}-${action.status}` ? "Working..." : action.label}
-                                            </button>
-                                        ))}
-                                        {["OPEN", "CANCELLED"].includes(shift.status) && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDeleteShift(shift.id)}
-                                                disabled={busyKey === `shift-delete-${shift.id}`}
-                                                className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                            >
-                                                {busyKey === `shift-delete-${shift.id}` ? "Deleting..." : "Delete shift"}
-                                            </button>
-                                        )}
-                                        {shift.status === "COMPLETED" && !shift.paid && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleMarkPaid(shift.id)}
-                                                disabled={busyKey === `shift-paid-${shift.id}`}
-                                                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"
-                                            >
-                                                {busyKey === `shift-paid-${shift.id}` ? "Saving..." : "Mark as paid"}
-                                            </button>
-                                        )}
-                                        {shift.paid && (
-                                            <span className="rounded-xl bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">
-                                                Paid
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {acceptedApplication && (
-                                        <div className="mb-6 rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-emerald-600">Assigned worker</p>
-                                            <div className="mt-3 flex items-start justify-between gap-3">
-                                                <div>
-                                                    <p className="font-semibold text-gray-900">{acceptedApplication.worker?.name}</p>
-                                                    <p className="text-sm text-gray-500">{acceptedApplication.worker?.email}</p>
-                                                    <p className="mt-1 text-sm text-gray-500">
-                                                        Rating {Number(acceptedApplication.worker?.rating || 0).toFixed(1)} • {acceptedApplication.worker?.completedShiftsCount || 0} completed shifts
-                                                    </p>
-                                                </div>
-                                                {(() => {
-                                                    const match = applicantMatches[acceptedApplication.id];
-                                                    const score = match?.aiScore ?? match?.fallbackScore ?? getWorkerMatchScore(shift, acceptedApplication.worker);
-                                                    return (
-                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
-                                                    Match {score}% {matchSourceLabel(match?.source)}
-                                                </span>
-                                                    );
-                                                })()}
-                                            </div>
-
-                                            {shift.status === "COMPLETED" && (
-                                                acceptedApplication.workerRating != null ? (
-                                                    <div className="mt-4 rounded-2xl bg-white p-4">
-                                                        <p className="text-sm font-semibold text-gray-800">You rated this worker {acceptedApplication.workerRating}/5</p>
-                                                        <p className="mt-1 text-sm text-gray-500">{acceptedApplication.workerReview || "No written review added."}</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="mt-4 space-y-3 rounded-2xl bg-white p-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <label className="text-sm font-medium text-gray-700" htmlFor={`worker-rating-${acceptedApplication.id}`}>
-                                                                Rate worker
-                                                            </label>
-                                                            <select
-                                                                id={`worker-rating-${acceptedApplication.id}`}
-                                                                value={(ratingDrafts[acceptedApplication.id] || emptyRatingDraft).rating}
-                                                                onChange={(event) => handleRatingDraftChange(acceptedApplication.id, "rating", event.target.value)}
-                                                                className="rounded-xl border border-orange-200 px-3 py-2"
-                                                            >
-                                                                {[5, 4, 3, 2, 1].map((value) => (
-                                                                    <option key={value} value={value}>{value}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                        <textarea
-                                                            value={(ratingDrafts[acceptedApplication.id] || emptyRatingDraft).review}
-                                                            onChange={(event) => handleRatingDraftChange(acceptedApplication.id, "review", event.target.value)}
-                                                            placeholder="Share how the worker performed"
-                                                            className="min-h-[96px] w-full rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleSubmitWorkerRating(acceptedApplication.id)}
-                                                            disabled={busyKey === `rating-${acceptedApplication.id}`}
-                                                            className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
-                                                        >
-                                                            {busyKey === `rating-${acceptedApplication.id}` ? "Saving..." : "Submit rating"}
-                                                        </button>
-                                                    </div>
-                                                )
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <div className="border-t border-gray-100 pt-5">
-                                        <div className="mb-4 flex items-center justify-between gap-3">
-                                            <h5 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Applicants</h5>
-                                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-                                                {shiftApplications.length}
-                                            </span>
-                                        </div>
-
-                                        {shiftApplications.length > 0 ? (
-                                            <div className="space-y-4">
-                                                {shiftApplications.map((application) => {
-                                                    const isBusy = busyKey.startsWith(`application-${application.id}-`);
-                                                    const match = applicantMatches[application.id];
-                                                    const matchScore = match?.aiScore ?? match?.fallbackScore ?? getWorkerMatchScore(shift, application.worker);
-                                                    const matchSource = matchSourceLabel(match?.source);
-
-                                                    return (
-                                                        <div key={application.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                                                            <div className="mb-3 flex items-start justify-between gap-3">
-                                                                <div>
-                                                                    <p className="font-semibold text-gray-800">{application.worker?.name || "Applicant"}</p>
-                                                                    <p className="text-sm text-gray-500">{application.worker?.email}</p>
-                                                                    <p className="mt-1 text-xs text-gray-500">Skills: {application.worker?.skills || "No skills listed"}</p>
-                                                                    <p className="mt-1 text-xs text-gray-500">Location: {application.worker?.location || "No location listed"}</p>
-                                                                    <p className="mt-1 text-xs text-gray-500">
-                                                                        Rating {Number(application.worker?.rating || 0).toFixed(1)} • {application.worker?.completedShiftsCount || 0} completed • Match {matchScore}% ({matchSource})
-                                                                    </p>
-                                                                    <p className="mt-2 text-xs text-gray-500">
-                                                                        {match?.explanation || (isLoadingMatches ? "Loading local AI recommendation..." : "Recommendation unavailable.")}
-                                                                    </p>
-                                                                    {match?.strengths?.length > 0 && (
-                                                                        <p className="mt-1 text-xs text-emerald-700">
-                                                                            Strengths: {match.strengths.join(" • ")}
-                                                                        </p>
-                                                                    )}
-                                                                    {match?.risks?.length > 0 && (
-                                                                        <p className="mt-1 text-xs text-amber-700">
-                                                                            Watch: {match.risks.join(" • ")}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-
-                                                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${applicationStatusClasses[application.status] || "bg-gray-100 text-gray-700"}`}>
-                                                                    {application.status}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="flex gap-3">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleUpdateStatus(application.id, "ACCEPTED")}
-                                                                    disabled={isBusy || application.status === "ACCEPTED" || shift.status !== "OPEN"}
-                                                                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                                                                        isBusy || application.status === "ACCEPTED" || shift.status !== "OPEN"
-                                                                            ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                                                                            : "bg-emerald-500 text-white hover:bg-emerald-600"
-                                                                    }`}
-                                                                >
-                                                                    {application.status === "ACCEPTED" ? "Accepted" : "Accept"}
-                                                                </button>
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleUpdateStatus(application.id, "REJECTED")}
-                                                                    disabled={isBusy || application.status === "REJECTED"}
-                                                                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                                                                        isBusy || application.status === "REJECTED"
-                                                                            ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                                                                            : "bg-rose-500 text-white hover:bg-rose-600"
-                                                                    }`}
-                                                                >
-                                                                    {application.status === "REJECTED" ? "Rejected" : "Reject"}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-gray-500">No applicants yet for this shift.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    {renderActiveTab()}
                 </section>
             </div>
+
+            {paymentShift && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-sm uppercase tracking-[0.25em] text-orange-500">Payment Checkout</p>
+                                <h3 className="mt-2 text-2xl font-bold text-gray-900">{paymentShift.title}</h3>
+                                <p className="mt-2 text-sm text-gray-600">Mock payment simulation for this completed shift.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setPaymentShift(null)}
+                                className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <div className="mt-5 rounded-2xl bg-orange-50 p-4">
+                            <p className="text-sm font-semibold text-gray-700">Amount</p>
+                            <p className="mt-1 text-3xl font-bold text-gray-900">
+                                ${Number(paymentShift.mockPayment?.amount || 0).toFixed(2)}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Worker: {paymentShift.assignedWorker?.name || paymentShift.mockPayment?.worker?.name || "Assigned worker"}
+                            </p>
+                        </div>
+                        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                            Demo only—no money is transferred and no payment details are collected. The confirmation uses a fixed test card ending in 4242.
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleConfirmPayment}
+                            disabled={busyKey === `payment-confirm-${paymentShift.mockPayment?.id}`}
+                            className="mt-6 w-full rounded-2xl bg-emerald-500 px-5 py-3 font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                        >
+                            {busyKey === `payment-confirm-${paymentShift.mockPayment?.id}` ? "Processing payment..." : "Pay Worker"}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
