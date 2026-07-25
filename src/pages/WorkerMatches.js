@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
 import WorkerJobCard from "../components/WorkerJobCard";
+import ShiftSearchAgent from "../components/ShiftSearchAgent";
 import api from "../api/axios";
 import {
     getNotificationButtonLabel,
@@ -33,6 +34,11 @@ function WorkerMatches() {
     const [togglingLikeIds, setTogglingLikeIds] = useState([]);
     const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
     const [notificationsEnabled, setNotificationsEnabled] = useState(() => getNotificationPreference(user?.id));
+    const [agentMatches, setAgentMatches] = useState([]);
+    const [agentInterpretation, setAgentInterpretation] = useState("");
+    const [agentError, setAgentError] = useState("");
+    const [isAgentSearching, setIsAgentSearching] = useState(false);
+    const [isAgentSearchActive, setIsAgentSearchActive] = useState(false);
 
     useEffect(() => {
         if (!isActiveWorkerSession(user)) {
@@ -120,6 +126,29 @@ function WorkerMatches() {
         setNotificationsEnabled(result.enabled);
     };
 
+    const handleAgentSearch = async (query) => {
+        try {
+            setAgentError("");
+            setIsAgentSearching(true);
+            const response = await api.post("/matches/worker/shifts/search", { query });
+            setAgentMatches(response.data.matches || []);
+            setAgentInterpretation(response.data.interpretation || "");
+            setIsAgentSearchActive(true);
+        } catch (error) {
+            console.error(error);
+            setAgentError(getApiErrorMessage(error, "We couldn't search shifts right now. Please try again."));
+        } finally {
+            setIsAgentSearching(false);
+        }
+    };
+
+    const handleAgentClear = () => {
+        setAgentMatches([]);
+        setAgentInterpretation("");
+        setAgentError("");
+        setIsAgentSearchActive(false);
+    };
+
     const appliedShiftIds = new Set(applications.map((application) => application.shift?.id));
     const matchedShifts = shifts
         .filter((shift) => shift.status === "OPEN")
@@ -129,6 +158,15 @@ function WorkerMatches() {
             const secondMatch = matches[second.id];
             return (firstMatch?.rank || 999) - (secondMatch?.rank || 999);
         });
+
+    const agentReasonByShiftId = Object.fromEntries(
+        agentMatches.map((agentMatch) => [agentMatch.shiftId, agentMatch.reason])
+    );
+    const displayedShifts = isAgentSearchActive
+        ? agentMatches
+            .map((agentMatch) => shifts.find((shift) => shift.id === agentMatch.shiftId && shift.status === "OPEN"))
+            .filter(Boolean)
+        : matchedShifts;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
@@ -151,14 +189,26 @@ function WorkerMatches() {
                             AI scores are advisory. Review the full shift details and make your own decision before applying.
                         </p>
                     </div>
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Search matched jobs"
-                        className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    />
+                    {!isAgentSearchActive && (
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="Search matched jobs"
+                            className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                    )}
                 </div>
+
+                {isAgentSearchActive && (
+                    <div className="mb-8 max-w-3xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                        <span className="font-semibold">Showing AI search results.</span>{" "}
+                        {agentInterpretation || "Here's what matched your description."}{" "}
+                        <button type="button" onClick={handleAgentClear} className="font-semibold underline">
+                            Clear
+                        </button>
+                    </div>
+                )}
 
                 {feedback && (
                     <div className="mb-8 max-w-3xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
@@ -172,23 +222,31 @@ function WorkerMatches() {
                     </div>
                 ) : (
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {matchedShifts.length > 0 ? (
-                        matchedShifts.map((shift) => (
-                            <WorkerJobCard
-                                key={shift.id}
-                                shift={shift}
-                                match={matches[shift.id]}
-                                hasApplied={appliedShiftIds.has(shift.id)}
-                                isSubmitting={submittingShiftIds.includes(shift.id)}
-                                isLiked={likedShiftIds.has(shift.id)}
-                                isTogglingLike={togglingLikeIds.includes(shift.id)}
-                                onApply={handleApply}
-                                onToggleLike={handleToggleLike}
-                            />
+                    {displayedShifts.length > 0 ? (
+                        displayedShifts.map((shift) => (
+                            <div key={shift.id} className="flex flex-col gap-2">
+                                <WorkerJobCard
+                                    shift={shift}
+                                    match={matches[shift.id]}
+                                    hasApplied={appliedShiftIds.has(shift.id)}
+                                    isSubmitting={submittingShiftIds.includes(shift.id)}
+                                    isLiked={likedShiftIds.has(shift.id)}
+                                    isTogglingLike={togglingLikeIds.includes(shift.id)}
+                                    onApply={handleApply}
+                                    onToggleLike={handleToggleLike}
+                                />
+                                {isAgentSearchActive && agentReasonByShiftId[shift.id] && (
+                                    <p className="px-2 text-xs text-gray-500">
+                                        AI: {agentReasonByShiftId[shift.id]}
+                                    </p>
+                                )}
+                            </div>
                         ))
                     ) : (
                         <p className="text-gray-600">
-                            {search
+                            {isAgentSearchActive
+                                ? "No open shifts matched that description. Try broadening it, or clear the search."
+                                : search
                                 ? "No matched jobs found for this search."
                                 : "No open jobs are available to rank yet. Add shifts with a manager account first."}
                         </p>
@@ -196,6 +254,14 @@ function WorkerMatches() {
                 </div>
                 )}
             </div>
+
+            <ShiftSearchAgent
+                onSearch={handleAgentSearch}
+                onClear={handleAgentClear}
+                isSearching={isAgentSearching}
+                error={agentError}
+                hasActiveSearch={isAgentSearchActive}
+            />
         </div>
     );
 }

@@ -357,7 +357,7 @@ function AdminHome() {
             <div className="flex min-h-screen flex-col lg:flex-row">
                 <aside className="bg-[#1f2937] px-6 py-8 text-white lg:w-72">
                     <div className="mb-10">
-                        <p className="text-sm uppercase tracking-[0.35em] text-orange-200">Smart Hiring</p>
+                        <p className="text-sm uppercase tracking-[0.35em] text-orange-200">HubPin</p>
                         <h1 className="mt-3 text-3xl font-bold">Admin Control</h1>
                         <p className="mt-3 text-sm text-slate-300">
                             Secure the platform, approve managers, and moderate the live marketplace.

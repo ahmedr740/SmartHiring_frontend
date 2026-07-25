@@ -20,7 +20,7 @@ function WorkerHeader({ userName, notificationLabel, notificationsEnabled, onTog
     return (
         <div className="flex flex-col gap-4 bg-white px-6 py-5 shadow-sm lg:flex-row lg:items-center lg:justify-between lg:px-20">
             <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold text-orange-600">Smart Hiring</h1>
+                <h1 className="text-2xl font-bold text-orange-600">HubPin</h1>
                 <span className="text-sm font-medium text-gray-500">Welcome, {userName || "Worker"}</span>
             </div>
 

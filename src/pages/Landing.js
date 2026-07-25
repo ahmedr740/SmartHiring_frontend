@@ -9,7 +9,7 @@ function Landing() {
             {/* Navbar */}
             <nav className="flex justify-between items-center px-8 md:px-20 py-6">
                 <h1 className="text-2xl font-bold text-orange-600 tracking-wide">
-                    Smart Hiring
+                    HubPin
                 </h1>
 
                 <div className="space-x-4">
@@ -75,7 +75,7 @@ function Landing() {
             {/* Features Section */}
             <div className="px-8 md:px-20 py-20 bg-white">
                 <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
-                    Why Smart Hiring?
+                    Why HubPin?
                 </h3>
 
                 <div className="grid md:grid-cols-3 gap-10 text-center">
@@ -123,7 +123,7 @@ function Landing() {
                     onClick={() => navigate("/register")}
                     className="bg-white text-orange-600 px-8 py-3 rounded-xl font-semibold shadow-lg hover:bg-orange-100 transition"
                 >
-                    Join Smart Hiring Today
+                    Join HubPin Today
                 </button>
             </div>
 

@@ -55,7 +55,7 @@ function ShiftChat() {
             const message = JSON.parse(event.data);
             setMessages((current) => current.some((existing) => existing.id === message.id) ? current : [...current, message]);
             if (message.sender?.id !== user.id) {
-                notifyOnce(`chat-${message.id}`, "New Smart Hiring chat message", message.message, notificationsEnabled);
+                notifyOnce(`chat-${message.id}`, "New HubPin chat message", message.message, notificationsEnabled);
             }
         };
         socket.onerror = () => setFeedback("Live chat connection is unavailable. Messages still save through the server.");
@@ -97,7 +97,7 @@ function ShiftChat() {
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
             <div className="flex flex-col gap-4 bg-white px-8 py-6 shadow-sm md:flex-row md:items-center md:justify-between md:px-20">
                 <div>
-                    <h1 className="text-2xl font-bold text-orange-600">Smart Hiring</h1>
+                    <h1 className="text-2xl font-bold text-orange-600">HubPin</h1>
                     <p className="text-sm text-gray-500">Shift chat</p>
                 </div>
                 <div className="flex flex-wrap gap-3">

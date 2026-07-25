@@ -73,7 +73,7 @@ function Notifications() {
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
             <header className="flex flex-col gap-4 bg-white px-6 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between md:px-20">
                 <div>
-                    <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Smart Hiring</p>
+                    <p className="text-sm uppercase tracking-[0.3em] text-orange-500">HubPin</p>
                     <h1 className="mt-2 text-3xl font-bold text-gray-900">Notifications</h1>
                 </div>
                 <button

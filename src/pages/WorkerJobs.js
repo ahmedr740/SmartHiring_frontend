@@ -82,7 +82,7 @@ function WorkerJobs() {
 
     useEffect(() => {
         if (notificationPermission === "granted" && notificationsEnabled && reminders.length > 0) {
-            notifyOnce(`worker-reminder-${reminders.join("|")}`, "Smart Hiring update", reminders[0], notificationsEnabled);
+            notifyOnce(`worker-reminder-${reminders.join("|")}`, "HubPin update", reminders[0], notificationsEnabled);
         }
     }, [notificationPermission, notificationsEnabled, reminders]);
 

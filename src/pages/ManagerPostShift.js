@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { getApiErrorMessage } from "./workerUtils";
+import { getApiErrorMessage, isAiMatchSource, matchSourceLabel } from "./workerUtils";
 
 const getSavedUser = () => JSON.parse(localStorage.getItem("user") || "null");
 
@@ -13,6 +13,21 @@ const createShiftPayload = (values) => ({
     pay: Number(values.pay),
     roleNeeded: values.roleNeeded,
     location: values.location,
+    description: values.description,
+    requirements: values.requirements,
+});
+
+const applyDraftSuggestion = (current, suggestion) => ({
+    ...current,
+    title: suggestion.title || current.title,
+    description: suggestion.description || current.description,
+    requirements: suggestion.requirements || current.requirements,
+    roleNeeded: suggestion.roleNeeded || current.roleNeeded,
+    pay: suggestion.pay != null ? String(suggestion.pay) : current.pay,
+    date: suggestion.date || current.date,
+    startTime: suggestion.startTime || current.startTime,
+    endTime: suggestion.endTime || current.endTime,
+    location: suggestion.location || current.location,
 });
 
 function ManagerPostShift() {
@@ -29,7 +44,13 @@ function ManagerPostShift() {
         pay: "",
         roleNeeded: "",
         location: "",
+        description: "",
+        requirements: "",
     });
+    const [assistantInput, setAssistantInput] = useState("");
+    const [isDrafting, setIsDrafting] = useState(false);
+    const [assistantError, setAssistantError] = useState("");
+    const [assistantMeta, setAssistantMeta] = useState(null);
 
     useEffect(() => {
         if (!user?.id || user.role !== "MANAGER" || user.status !== "ACTIVE") {
@@ -51,6 +72,27 @@ function ManagerPostShift() {
             ...current,
             [field]: value,
         }));
+    };
+
+    const handleGenerateDraft = async () => {
+        if (!assistantInput.trim()) {
+            setAssistantError("Describe the shift you want to post first.");
+            return;
+        }
+
+        try {
+            setAssistantError("");
+            setIsDrafting(true);
+            const response = await api.post("/shifts/ai-draft", { managerInput: assistantInput });
+            const suggestion = response.data;
+            setDraft((current) => applyDraftSuggestion(current, suggestion));
+            setAssistantMeta({ assumptions: suggestion.assumptions, source: suggestion.source });
+        } catch (error) {
+            console.error(error);
+            setAssistantError(getApiErrorMessage(error, "We couldn't generate a draft right now. Please fill in the form manually."));
+        } finally {
+            setIsDrafting(false);
+        }
     };
 
     const handleCreateShift = async (event) => {
@@ -78,7 +120,7 @@ function ManagerPostShift() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
             <div className="flex flex-col gap-4 bg-white px-8 py-6 shadow-sm md:flex-row md:items-center md:justify-between md:px-20">
-                <h1 className="text-2xl font-bold text-orange-600">Smart Hiring</h1>
+                <h1 className="text-2xl font-bold text-orange-600">HubPin</h1>
 
                 <div className="flex flex-wrap items-center gap-3 md:gap-6">
                     <span className="font-medium text-gray-600">Welcome, {profile?.name || user?.name}</span>
@@ -113,6 +155,53 @@ function ManagerPostShift() {
                         {feedback}
                     </div>
                 )}
+
+                <section className="mb-8 max-w-5xl rounded-3xl border border-orange-200 bg-white p-6 shadow-lg">
+                    <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-600">
+                        AI Assistant
+                    </span>
+                    <h3 className="mt-3 text-lg font-semibold text-gray-900">Draft this shift from a few notes</h3>
+                    <p className="mt-2 text-sm text-gray-600">
+                        Describe the shift in your own words and we&apos;ll draft the details below for you to review and edit before posting.
+                    </p>
+
+                    <textarea
+                        rows={3}
+                        placeholder="e.g. need 2 servers Fri night, $18/hr, busy weekend"
+                        value={assistantInput}
+                        onChange={(event) => setAssistantInput(event.target.value)}
+                        className="mt-4 w-full rounded-xl border p-4 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+
+                    {assistantError && (
+                        <p className="mt-3 text-sm text-rose-600">{assistantError}</p>
+                    )}
+
+                    {assistantMeta?.assumptions && (
+                        <p className="mt-3 rounded-xl bg-orange-50 px-4 py-2 text-sm text-orange-700">
+                            <span className="font-semibold">Assumptions: </span>
+                            {assistantMeta.assumptions}
+                        </p>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={handleGenerateDraft}
+                            disabled={isDrafting}
+                            className="rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-lg transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                        >
+                            {isDrafting ? "Drafting..." : "Generate draft"}
+                        </button>
+                        {assistantMeta?.source && (
+                            <span className="text-xs font-medium text-gray-500">
+                                {isAiMatchSource(assistantMeta.source)
+                                    ? `Drafted by ${matchSourceLabel(assistantMeta.source)}. Review before posting.`
+                                    : "Review the draft before posting."}
+                            </span>
+                        )}
+                    </div>
+                </section>
 
                 <form onSubmit={handleCreateShift} className="grid max-w-5xl gap-6 rounded-3xl bg-white p-8 shadow-2xl md:grid-cols-2">
                     <input
@@ -181,6 +270,22 @@ function ManagerPostShift() {
                         <option value="CASHIER">Cashier</option>
                         <option value="KITCHEN HELPER">Kitchen Helper</option>
                     </select>
+
+                    <textarea
+                        rows={3}
+                        placeholder="Description (optional)"
+                        value={draft.description}
+                        onChange={(event) => handleDraftChange("description", event.target.value)}
+                        className="rounded-xl border p-4 focus:outline-none focus:ring-2 focus:ring-orange-400 md:col-span-2"
+                    />
+
+                    <textarea
+                        rows={3}
+                        placeholder="Requirements (optional)"
+                        value={draft.requirements}
+                        onChange={(event) => handleDraftChange("requirements", event.target.value)}
+                        className="rounded-xl border p-4 focus:outline-none focus:ring-2 focus:ring-orange-400 md:col-span-2"
+                    />
 
                     <button
                         type="submit"

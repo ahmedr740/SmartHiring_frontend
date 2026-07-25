@@ -68,7 +68,7 @@ function Login() {
             <div className="hidden md:flex md:w-1/2 items-center justify-center p-16">
                 <div>
                     <h1 className="text-5xl font-extrabold text-orange-600 mb-6">
-                        Smart Hiring
+                        HubPin
                     </h1>
                     <p className="text-gray-600 text-lg max-w-md">
                         Connect managers and restaurant staff instantly.

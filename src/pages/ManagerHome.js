@@ -166,7 +166,7 @@ function ManagerHome() {
 
     useEffect(() => {
         if (notificationPermission === "granted" && notificationsEnabled && reminders.length > 0) {
-            notifyOnce(`manager-reminder-${reminders.join("|")}`, "Smart Hiring update", reminders[0], notificationsEnabled);
+            notifyOnce(`manager-reminder-${reminders.join("|")}`, "HubPin update", reminders[0], notificationsEnabled);
         }
     }, [notificationPermission, notificationsEnabled, reminders]);
 
@@ -793,7 +793,7 @@ function ManagerHome() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
             <div className="flex flex-col gap-4 bg-white px-8 py-6 shadow-sm md:flex-row md:items-center md:justify-between md:px-20">
-                <h1 className="text-2xl font-bold text-orange-600">Smart Hiring</h1>
+                <h1 className="text-2xl font-bold text-orange-600">HubPin</h1>
 
                 <div className="flex flex-wrap items-center gap-3 md:gap-6">
                     <span className="font-medium text-gray-600">Welcome, {profile?.name || user?.name}</span>
