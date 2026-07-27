@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
+import PageHeader from "../components/ui/PageHeader";
 import api from "../api/axios";
 import {
     getNotificationButtonLabel,
@@ -115,7 +116,7 @@ function WorkerProfile() {
     const availableBalance = Number(wallet?.availableBalance || 0);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+        <div className="jh-page">
             <WorkerHeader
                 userName={profile?.name || user?.name}
                 notificationLabel={getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
@@ -123,63 +124,37 @@ function WorkerProfile() {
                 onToggleNotifications={handleToggleNotifications}
             />
 
-            <div className="px-8 py-12 md:px-20">
-                <section className="max-w-5xl rounded-[2rem] bg-white p-8 shadow-xl">
-                    <div className="mb-6">
-                        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Profile</p>
-                        <h2 className="mt-3 text-4xl font-bold text-gray-900">Update matching profile</h2>
-                        <p className="mt-3 text-gray-600">Keep your skills, location, and availability updated so job matches are more accurate.</p>
-                    </div>
+            <div className="jh-container py-8 sm:py-10 lg:py-12">
+                <section className="max-w-5xl rounded-3xl border border-gray-100 bg-white p-8 shadow-card">
+                    <PageHeader eyebrow="Profile" title="Update matching profile" description="Keep your skills, location, and availability updated so job matches are more accurate." />
 
                     {feedback && (
-                        <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                        <div className="mb-6 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                             {feedback}
                         </div>
                     )}
 
                     <div className="grid gap-5 md:grid-cols-2">
-                        <input
-                            type="text"
-                            value={profileDraft.name}
-                            onChange={(event) => handleProfileDraftChange("name", event.target.value)}
-                            placeholder="Your name"
-                            className="rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        />
-                        <input
-                            type="text"
-                            value={profileDraft.location}
-                            onChange={(event) => handleProfileDraftChange("location", event.target.value)}
-                            placeholder="Preferred area or district"
-                            className="rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        />
-                        <textarea
-                            value={profileDraft.skills}
-                            onChange={(event) => handleProfileDraftChange("skills", event.target.value)}
-                            placeholder="Skills, separated by commas"
-                            className="min-h-[120px] rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        />
-                        <textarea
-                            value={profileDraft.availability}
-                            onChange={(event) => handleProfileDraftChange("availability", event.target.value)}
-                            placeholder="Availability, for example: Weeknights after 6pm, Saturdays"
-                            className="min-h-[120px] rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        />
+                        <label><span className="jh-label">Full name</span><input type="text" value={profileDraft.name} onChange={(event) => handleProfileDraftChange("name", event.target.value)} placeholder="Your name" className="jh-field" /></label>
+                        <label><span className="jh-label">Preferred location</span><input type="text" value={profileDraft.location} onChange={(event) => handleProfileDraftChange("location", event.target.value)} placeholder="Area or district" className="jh-field" /></label>
+                        <label><span className="jh-label">Skills</span><textarea value={profileDraft.skills} onChange={(event) => handleProfileDraftChange("skills", event.target.value)} placeholder="Skills, separated by commas" className="jh-field min-h-[120px] resize-y" /></label>
+                        <label><span className="jh-label">Availability</span><textarea value={profileDraft.availability} onChange={(event) => handleProfileDraftChange("availability", event.target.value)} placeholder="For example: weeknights after 6pm, Saturdays" className="jh-field min-h-[120px] resize-y" /></label>
                     </div>
 
                     <button
                         type="button"
                         onClick={handleSaveProfile}
                         disabled={isSaving}
-                        className="mt-6 rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                        className="mt-6 rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
                     >
                         {isSaving ? "Saving..." : "Save profile"}
                     </button>
                 </section>
 
-                <section className="mt-8 max-w-5xl rounded-[2rem] bg-white p-8 shadow-xl">
+                <section className="mt-8 max-w-5xl rounded-3xl border border-gray-100 bg-white p-8 shadow-card">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
-                            <p className="text-sm uppercase tracking-[0.3em] text-orange-500">Wallet</p>
+                            <p className="text-sm uppercase tracking-[0.3em] text-brand-500">Wallet</p>
                             <h2 className="mt-3 text-4xl font-bold text-gray-900">Earnings wallet</h2>
                             <p className="mt-3 max-w-2xl text-gray-600">
                                 Track paid shift earnings, previous withdrawals, and the balance available to transfer.
@@ -196,8 +171,8 @@ function WorkerProfile() {
                     </div>
 
                     <div className="mt-8 grid gap-4 md:grid-cols-3">
-                        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
-                            <p className="text-sm font-medium text-orange-700">Available balance</p>
+                        <div className="rounded-2xl border border-brand-100 bg-brand-50 p-5">
+                            <p className="text-sm font-medium text-brand-700">Available balance</p>
                             <p className="mt-3 text-3xl font-bold text-gray-900">{formatMoney(wallet?.availableBalance)}</p>
                         </div>
                         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">

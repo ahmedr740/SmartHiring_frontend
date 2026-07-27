@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
 import WorkerJobCard from "../components/WorkerJobCard";
 import ShiftSearchAgent from "../components/ShiftSearchAgent";
+import PageHeader from "../components/ui/PageHeader";
 import api from "../api/axios";
 import {
     getNotificationButtonLabel,
@@ -169,7 +170,7 @@ function WorkerMatches() {
         : matchedShifts;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+        <div className="jh-page">
             <WorkerHeader
                 userName={profile?.name || user?.name}
                 notificationLabel={getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
@@ -177,31 +178,24 @@ function WorkerMatches() {
                 onToggleNotifications={handleToggleNotifications}
             />
 
-            <div className="px-8 py-12 md:px-20">
-                <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.3em] text-orange-500">AI Job Match</p>
-                        <h2 className="mt-3 text-4xl font-bold text-gray-900">Jobs related to your profile</h2>
-                        <p className="mt-3 max-w-2xl text-gray-600">
-                            Matches are ranked by your skills, location, rating, availability, and completed shifts.
-                        </p>
-                        <p className="mt-2 max-w-2xl text-sm text-gray-500">
-                            AI scores are advisory. Review the full shift details and make your own decision before applying.
-                        </p>
-                    </div>
-                    {!isAgentSearchActive && (
+            <div className="jh-container py-8 sm:py-10 lg:py-12">
+                <PageHeader
+                    eyebrow="AI job match"
+                    title="Jobs related to your profile"
+                    description="Matches are ranked by your skills, location, rating, availability, and completed shifts. Scores are advisory, so review every shift before applying."
+                    actions={!isAgentSearchActive && (
                         <input
                             type="text"
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
                             placeholder="Search matched jobs"
-                            className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                            className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
                         />
                     )}
-                </div>
+                />
 
                 {isAgentSearchActive && (
-                    <div className="mb-8 max-w-3xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                    <div className="mb-8 max-w-3xl rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                         <span className="font-semibold">Showing AI search results.</span>{" "}
                         {agentInterpretation || "Here's what matched your description."}{" "}
                         <button type="button" onClick={handleAgentClear} className="font-semibold underline">
@@ -211,13 +205,13 @@ function WorkerMatches() {
                 )}
 
                 {feedback && (
-                    <div className="mb-8 max-w-3xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                    <div className="mb-8 max-w-3xl rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                         {feedback}
                     </div>
                 )}
 
                 {isLoading ? (
-                    <div className="rounded-2xl border border-orange-100 bg-white p-6 text-gray-600 shadow-sm">
+                    <div className="rounded-2xl border border-brand-100 bg-white p-6 text-gray-600 shadow-sm">
                         Loading job matches...
                     </div>
                 ) : (

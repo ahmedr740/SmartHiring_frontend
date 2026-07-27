@@ -1,11 +1,13 @@
+import { BellRing, BriefcaseBusiness, House, LogOut, Sparkles, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import BrandMark from "./BrandMark";
 import NotificationBell from "./NotificationBell";
 
 const navItems = [
-    { to: "/worker-home", label: "Home" },
-    { to: "/worker-matches", label: "AI Job Match" },
-    { to: "/worker-jobs", label: "My Jobs" },
-    { to: "/worker-profile", label: "Profile" },
+    { to: "/worker-home", label: "Home", icon: House },
+    { to: "/worker-matches", label: "AI matches", icon: Sparkles },
+    { to: "/worker-jobs", label: "My jobs", icon: BriefcaseBusiness },
+    { to: "/worker-profile", label: "Profile", icon: UserRound },
 ];
 
 function WorkerHeader({ userName, notificationLabel, notificationsEnabled, onToggleNotifications }) {
@@ -18,57 +20,47 @@ function WorkerHeader({ userName, notificationLabel, notificationsEnabled, onTog
     };
 
     return (
-        <div className="flex flex-col gap-4 bg-white px-6 py-5 shadow-sm lg:flex-row lg:items-center lg:justify-between lg:px-20">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold text-orange-600">HubPin</h1>
-                <span className="text-sm font-medium text-gray-500">Welcome, {userName || "Worker"}</span>
+        <header className="sticky top-0 z-30 border-b border-brand-100/80 bg-white/95 shadow-sm backdrop-blur-xl">
+            <div className="jh-container flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center justify-between gap-4">
+                    <BrandMark subtitle={`Welcome, ${userName || "Worker"}`} />
+                    <div className="flex items-center gap-2 lg:hidden">
+                        <NotificationBell />
+                        <button type="button" onClick={handleLogout} className="grid h-11 w-11 place-items-center rounded-xl border border-gray-200 text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700" aria-label="Log out">
+                            <LogOut size={18} aria-hidden="true" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:overflow-visible lg:pb-0">
+                    <nav className="flex shrink-0 items-center gap-1 rounded-2xl bg-gray-50 p-1" aria-label="Worker navigation">
+                        {navItems.map(({ to, label, icon: Icon }) => {
+                            const isActive = currentPath === to;
+                            return (
+                                <button key={to} type="button" onClick={() => navigate(to)} aria-current={isActive ? "page" : undefined} className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition sm:px-4 ${isActive ? "bg-white text-brand-700 shadow-sm" : "text-gray-500 hover:bg-white hover:text-brand-700"}`}>
+                                    <Icon size={16} aria-hidden="true" />
+                                    <span className={label === "AI matches" ? "whitespace-nowrap" : "whitespace-nowrap"}>{label}</span>
+                                </button>
+                            );
+                        })}
+                    </nav>
+
+                    {onToggleNotifications && (
+                        <button type="button" onClick={onToggleNotifications} className={`hidden min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold xl:inline-flex ${notificationsEnabled ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border border-gray-200 text-gray-500 hover:bg-brand-50 hover:text-brand-700"}`} aria-pressed={notificationsEnabled}>
+                            <BellRing size={16} aria-hidden="true" />
+                            {notificationLabel || "Alerts off"}
+                        </button>
+                    )}
+
+                    <div className="hidden items-center gap-2 lg:flex">
+                        <NotificationBell />
+                        <button type="button" onClick={handleLogout} className="grid h-11 w-11 place-items-center rounded-xl border border-gray-200 text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700" aria-label="Log out">
+                            <LogOut size={18} aria-hidden="true" />
+                        </button>
+                    </div>
+                </div>
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-                {navItems.map((item) => {
-                    const isActive = currentPath === item.to;
-
-                    return (
-                    <button
-                        key={item.to}
-                        type="button"
-                        onClick={() => navigate(item.to)}
-                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                            isActive
-                                ? "bg-orange-500 text-white shadow-md"
-                                : "border border-orange-200 text-orange-600 hover:bg-orange-50"
-                        }`}
-                    >
-                        {item.label}
-                    </button>
-                    );
-                })}
-
-                {onToggleNotifications && (
-                    <button
-                        type="button"
-                        onClick={onToggleNotifications}
-                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                            notificationsEnabled
-                                ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
-                                : "border border-orange-200 text-orange-700 hover:bg-orange-50"
-                        }`}
-                    >
-                        {notificationLabel || "Notifications Off"}
-                    </button>
-                )}
-
-                <NotificationBell />
-
-                <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-xl border border-orange-500 px-4 py-2 text-sm font-semibold text-orange-600 transition hover:bg-orange-500 hover:text-white"
-                >
-                    Logout
-                </button>
-            </div>
-        </div>
+        </header>
     );
 }
 

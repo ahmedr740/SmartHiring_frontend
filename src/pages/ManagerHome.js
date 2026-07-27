@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BellRing, LogOut, Plus, Store } from "lucide-react";
 import api from "../api/axios";
+import BrandMark from "../components/BrandMark";
 import NotificationBell from "../components/NotificationBell";
 import {
     getNotificationButtonLabel,
@@ -24,7 +26,7 @@ const applicationStatusClasses = {
 };
 
 const shiftStatusClasses = {
-    OPEN: "bg-orange-100 text-orange-700",
+    OPEN: "bg-brand-100 text-brand-700",
     FILLED: "bg-sky-100 text-sky-700",
     IN_PROGRESS: "bg-violet-100 text-violet-700",
     COMPLETED: "bg-emerald-100 text-emerald-700",
@@ -166,7 +168,7 @@ function ManagerHome() {
 
     useEffect(() => {
         if (notificationPermission === "granted" && notificationsEnabled && reminders.length > 0) {
-            notifyOnce(`manager-reminder-${reminders.join("|")}`, "HubPin update", reminders[0], notificationsEnabled);
+            notifyOnce(`manager-reminder-${reminders.join("|")}`, "JobHub update", reminders[0], notificationsEnabled);
         }
     }, [notificationPermission, notificationsEnabled, reminders]);
 
@@ -400,7 +402,7 @@ function ManagerHome() {
     );
 
     const renderShiftEditForm = (shift) => (
-        <div className="space-y-4 rounded-3xl border border-orange-100 bg-orange-50/60 p-4">
+        <div className="space-y-4 rounded-3xl border border-brand-100 bg-brand-50/60 p-4">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <h4 className="text-2xl font-semibold text-gray-800">Edit Shift</h4>
@@ -425,7 +427,7 @@ function ManagerHome() {
                         type={type}
                         value={shiftDraft[field]}
                         onChange={(event) => handleShiftDraftChange(field, event.target.value)}
-                        className="rounded-xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        className="rounded-xl border border-brand-200 px-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
                     />
                 ))}
             </div>
@@ -434,14 +436,14 @@ function ManagerHome() {
                     type="button"
                     onClick={() => handleSaveShiftEdit(shift.id)}
                     disabled={busyKey === `shift-edit-${shift.id}`}
-                    className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                    className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
                 >
                     {busyKey === `shift-edit-${shift.id}` ? "Saving..." : "Save changes"}
                 </button>
                 <button
                     type="button"
                     onClick={() => setEditingShiftId(null)}
-                    className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                    className="rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
                 >
                     Cancel
                 </button>
@@ -450,13 +452,13 @@ function ManagerHome() {
     );
 
     const renderIssuePanel = (shift) => (
-        <div className="rounded-3xl border border-orange-100 bg-orange-50/50 p-4">
+        <div className="rounded-3xl border border-brand-100 bg-brand-50/50 p-4">
             <div className="flex items-center justify-between gap-3">
                 <div>
                     <p className="text-sm font-semibold text-gray-800">Issue reports</p>
                     <p className="text-xs text-gray-500">Submit or track admin help for this shift.</p>
                 </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-orange-700">
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-700">
                     {issues.filter((issue) => issue.shift?.id === shift.id).length}
                 </span>
             </div>
@@ -464,7 +466,7 @@ function ManagerHome() {
                 <select
                     value={(issueDrafts[shift.id] || emptyIssueDraft).category}
                     onChange={(event) => handleIssueDraftChange(shift.id, "category", event.target.value)}
-                    className="rounded-xl border border-orange-200 px-3 py-2"
+                    className="rounded-xl border border-brand-200 px-3 py-2"
                 >
                     <option value="GENERAL">General</option>
                     <option value="PAYMENT">Payment</option>
@@ -478,14 +480,14 @@ function ManagerHome() {
                     value={(issueDrafts[shift.id] || emptyIssueDraft).description}
                     onChange={(event) => handleIssueDraftChange(shift.id, "description", event.target.value)}
                     placeholder="Describe the issue for admin review"
-                    className="rounded-xl border border-orange-200 px-3 py-2"
+                    className="rounded-xl border border-brand-200 px-3 py-2"
                 />
             </div>
             <button
                 type="button"
                 onClick={() => handleSubmitIssue(shift)}
                 disabled={submittingIssueId === shift.id}
-                className="mt-3 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
+                className="mt-3 rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-60"
             >
                 {submittingIssueId === shift.id ? "Submitting..." : "Submit issue"}
             </button>
@@ -621,7 +623,7 @@ function ManagerHome() {
                         id={`worker-rating-${acceptedApplication.id}`}
                         value={(ratingDrafts[acceptedApplication.id] || emptyRatingDraft).rating}
                         onChange={(event) => handleRatingDraftChange(acceptedApplication.id, "rating", event.target.value)}
-                        className="rounded-xl border border-orange-200 px-3 py-2"
+                        className="rounded-xl border border-brand-200 px-3 py-2"
                     >
                         {[5, 4, 3, 2, 1].map((value) => (
                             <option key={value} value={value}>{value}</option>
@@ -632,13 +634,13 @@ function ManagerHome() {
                     value={(ratingDrafts[acceptedApplication.id] || emptyRatingDraft).review}
                     onChange={(event) => handleRatingDraftChange(acceptedApplication.id, "review", event.target.value)}
                     placeholder="Share how the worker performed"
-                    className="min-h-[96px] w-full rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    className="min-h-[96px] w-full rounded-2xl border border-brand-200 px-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
                 />
                 <button
                     type="button"
                     onClick={() => handleSubmitWorkerRating(acceptedApplication.id)}
                     disabled={busyKey === `rating-${acceptedApplication.id}`}
-                    className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                    className="rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
                 >
                     {busyKey === `rating-${acceptedApplication.id}` ? "Saving..." : "Submit rating"}
                 </button>
@@ -647,7 +649,7 @@ function ManagerHome() {
     };
 
     const renderEmpty = (message) => (
-        <div className="rounded-3xl bg-white p-8 text-gray-600 shadow-lg">
+        <div className="rounded-3xl bg-white p-8 text-gray-600 shadow-card">
             {message}
         </div>
     );
@@ -655,14 +657,14 @@ function ManagerHome() {
     const renderPostedSection = () => (
         <div className="grid gap-6 xl:grid-cols-2">
             {postedShifts.length > 0 ? postedShifts.map((shift) => (
-                <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                     {editingShiftId === shift.id ? renderShiftEditForm(shift) : renderShiftSummary(shift)}
                     {editingShiftId !== shift.id && shift.status === "OPEN" && (
                         <div className="flex flex-wrap gap-3">
                             <button
                                 type="button"
                                 onClick={() => handleStartEditingShift(shift)}
-                                className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                                className="rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
                             >
                                 Edit shift
                             </button>
@@ -672,7 +674,7 @@ function ManagerHome() {
                                     type="button"
                                     onClick={() => handleShiftStatus(shift.id, action.status)}
                                     disabled={busyKey === `shift-${shift.id}-${action.status}`}
-                                    className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {busyKey === `shift-${shift.id}-${action.status}` ? "Working..." : action.label}
                                 </button>
@@ -697,7 +699,7 @@ function ManagerHome() {
                 {applicationShifts.length > 0 ? applicationShifts.map((shift) => {
                 const shiftApplications = getVisibleApplicationsForShift(shift.id);
                 return (
-                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                         {renderShiftSummary(shift)}
                         <div className="space-y-4">
                             <div className="flex items-center justify-between gap-3">
@@ -719,7 +721,7 @@ function ManagerHome() {
             {activeShifts.length > 0 ? activeShifts.map((shift) => {
                 const acceptedApplication = getAcceptedApplication(shift);
                 return (
-                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                         {renderShiftSummary(shift)}
                         {renderAssignedWorker(shift, acceptedApplication)}
                         <div className="flex flex-wrap gap-3">
@@ -729,7 +731,7 @@ function ManagerHome() {
                                     type="button"
                                     onClick={() => handleShiftStatus(shift.id, action.status)}
                                     disabled={busyKey === `shift-${shift.id}-${action.status}`}
-                                    className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {busyKey === `shift-${shift.id}-${action.status}` ? "Working..." : action.label}
                                 </button>
@@ -746,7 +748,7 @@ function ManagerHome() {
             {completedShifts.length > 0 ? completedShifts.map((shift) => {
                 const acceptedApplication = getAcceptedApplication(shift);
                 return (
-                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-lg">
+                    <article key={shift.id} className="space-y-5 rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                         {renderShiftSummary(shift)}
                         {renderAssignedWorker(shift, acceptedApplication)}
                         <div className="flex flex-wrap items-center gap-3">
@@ -791,65 +793,74 @@ function ManagerHome() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
-            <div className="flex flex-col gap-4 bg-white px-8 py-6 shadow-sm md:flex-row md:items-center md:justify-between md:px-20">
-                <h1 className="text-2xl font-bold text-orange-600">HubPin</h1>
-
-                <div className="flex flex-wrap items-center gap-3 md:gap-6">
-                    <span className="font-medium text-gray-600">Welcome, {profile?.name || user?.name}</span>
+        <div className="jh-page">
+            <header className="sticky top-0 z-30 border-b border-brand-100/80 bg-white/95 shadow-sm backdrop-blur-xl">
+                <div className="jh-container flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
+                    <BrandMark subtitle={`Manager · ${profile?.restaurantName || profile?.name || user?.name || "Workspace"}`} />
+                    <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
                         onClick={() => navigate("/manager-post-shift")}
-                        className="rounded-xl bg-orange-500 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white shadow-card hover:bg-brand-700"
                     >
-                        Post New Shift
+                        <Plus size={17} aria-hidden="true" /> Post shift
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate("/manager-profile")}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-bold text-brand-700 hover:bg-brand-50"
+                    >
+                        <Store size={17} aria-hidden="true" /> Profile
                     </button>
                     <NotificationBell />
                     <button
                         type="button"
                         onClick={handleToggleNotifications}
-                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        className={`hidden min-h-11 items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition lg:inline-flex ${
                             notificationsEnabled
-                                ? "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
-                                : "border border-orange-200 text-orange-700 hover:bg-orange-50"
+                                ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                : "border border-gray-200 text-gray-500 hover:bg-brand-50 hover:text-brand-700"
                         }`}
+                        aria-pressed={notificationsEnabled}
                     >
-                        {getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
+                        <BellRing size={16} aria-hidden="true" /> {getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
                     </button>
                     <button
                         type="button"
                         onClick={handleLogout}
-                        className="rounded-xl border border-orange-500 px-4 py-2 text-sm font-semibold text-orange-600 transition hover:bg-orange-500 hover:text-white"
+                        className="grid h-11 w-11 place-items-center rounded-xl border border-gray-200 text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                        aria-label="Log out"
                     >
-                        Logout
+                        <LogOut size={18} aria-hidden="true" />
                     </button>
+                    </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="space-y-10 px-8 py-12 md:px-20">
+            <div className="space-y-10 jh-container py-8 sm:py-10 lg:py-12">
                 <section>
                     <div className="grid gap-4 sm:grid-cols-4">
-                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Open</p>
+                        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Open</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{openShiftCount}</p>
                         </div>
-                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Applications</p>
+                        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Applications</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{pendingApplicationCount}</p>
                         </div>
-                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Active</p>
+                        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Active</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{activeShiftCount}</p>
                         </div>
-                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Completed</p>
+                        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Completed</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{completedShiftCount}</p>
                         </div>
                     </div>
                 </section>
 
                 {feedback && (
-                    <div className="max-w-4xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                    <div className="max-w-4xl rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                         {feedback}
                     </div>
                 )}
@@ -865,9 +876,9 @@ function ManagerHome() {
                 )}
 
                 {reminders.length > 0 && (
-                    <div className="grid gap-3 rounded-3xl border border-orange-100 bg-white p-5 shadow-lg md:grid-cols-3">
+                    <div className="grid gap-3 rounded-3xl border border-brand-100 bg-white p-5 shadow-card md:grid-cols-3">
                         {reminders.map((reminder) => (
-                            <div key={reminder} className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700">
+                            <div key={reminder} className="rounded-2xl bg-brand-50 px-4 py-3 text-sm font-medium text-brand-700">
                                 {reminder}
                             </div>
                         ))}
@@ -885,8 +896,8 @@ function ManagerHome() {
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                                         activeTab === tab.id
-                                            ? "bg-orange-500 text-white shadow-md"
-                                            : "border border-orange-200 bg-white text-orange-600 hover:bg-orange-50"
+                                            ? "bg-brand-600 text-white shadow-md"
+                                            : "border border-brand-200 bg-white text-brand-600 hover:bg-brand-50"
                                     }`}
                                 >
                                     {tab.label}
@@ -900,10 +911,10 @@ function ManagerHome() {
 
             {paymentShift && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+                    <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-soft">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-sm uppercase tracking-[0.25em] text-orange-500">Payment Checkout</p>
+                                <p className="text-sm uppercase tracking-[0.25em] text-brand-500">Payment Checkout</p>
                                 <h3 className="mt-2 text-2xl font-bold text-gray-900">{paymentShift.title}</h3>
                                 <p className="mt-2 text-sm text-gray-600">Mock payment simulation for this completed shift.</p>
                             </div>
@@ -915,7 +926,7 @@ function ManagerHome() {
                                 Close
                             </button>
                         </div>
-                        <div className="mt-5 rounded-2xl bg-orange-50 p-4">
+                        <div className="mt-5 rounded-2xl bg-brand-50 p-4">
                             <p className="text-sm font-semibold text-gray-700">Amount</p>
                             <p className="mt-1 text-3xl font-bold text-gray-900">
                                 ${Number(paymentShift.mockPayment?.amount || 0).toFixed(2)}

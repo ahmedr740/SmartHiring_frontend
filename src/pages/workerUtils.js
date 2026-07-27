@@ -5,7 +5,7 @@ export const statusClasses = {
 };
 
 export const shiftStatusClasses = {
-    OPEN: "bg-orange-100 text-orange-700",
+    OPEN: "bg-brand-100 text-brand-700",
     FILLED: "bg-sky-100 text-sky-700",
     IN_PROGRESS: "bg-violet-100 text-violet-700",
     COMPLETED: "bg-emerald-100 text-emerald-700",

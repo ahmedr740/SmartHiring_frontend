@@ -8,6 +8,7 @@ import WorkerProfile from "./pages/WorkerProfile";
 import WorkerJobs from "./pages/WorkerJobs";
 import ManagerHome from "./pages/ManagerHome";
 import ManagerPostShift from "./pages/ManagerPostShift";
+import ManagerProfile from "./pages/ManagerProfile";
 import ShiftChat from "./pages/ShiftChat";
 import AdminHome from "./pages/AdminHome";
 import Notifications from "./pages/Notifications";
@@ -25,6 +26,7 @@ function App() {
                 <Route path="/worker-jobs" element={<WorkerJobs />} />
                 <Route path="/manager-home" element={<ManagerHome />} />
                 <Route path="/manager-post-shift" element={<ManagerPostShift />} />
+                <Route path="/manager-profile" element={<ManagerProfile />} />
                 <Route path="/shift-chat/:shiftId" element={<ShiftChat />} />
                 <Route path="/admin-home" element={<AdminHome />} />
                 <Route path="/notifications" element={<Notifications />} />

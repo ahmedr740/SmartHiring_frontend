@@ -23,7 +23,7 @@ jest.mock("react-router-dom", () => ({
 }), { virtual: true });
 
 jest.mock("./components/NotificationBell", () => () => null);
-test("renders HubPin landing page content", () => {
+test("renders JobHub landing page content", () => {
   render(<App />);
-  expect(screen.getAllByText(/hubpin/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/JobHub/i).length).toBeGreaterThan(0);
 });

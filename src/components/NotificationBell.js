@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Bell, CheckCheck } from "lucide-react";
 import api from "../api/axios";
 
 const formatAge = (value) => {
@@ -80,9 +81,10 @@ function NotificationBell() {
                 type="button"
                 onClick={toggle}
                 aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
-                className="relative rounded-xl border border-orange-200 bg-white px-3 py-2 text-orange-700 transition hover:bg-orange-50"
+                aria-expanded={open}
+                className="relative grid h-11 w-11 place-items-center rounded-xl border border-gray-200 bg-white text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
             >
-                <span aria-hidden="true" className="text-lg">🔔</span>
+                <Bell size={19} aria-hidden="true" />
                 {unreadCount > 0 && (
                     <span className="absolute -right-2 -top-2 min-w-[1.35rem] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[11px] font-bold text-white">
                         {unreadCount > 99 ? "99+" : unreadCount}
@@ -91,7 +93,7 @@ function NotificationBell() {
             </button>
 
             {open && (
-                <div className="absolute right-0 z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-2xl">
+                <div className="absolute right-0 z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-brand-100 bg-white shadow-soft">
                     <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                         <div>
                             <p className="font-bold text-gray-900">Notifications</p>
@@ -103,7 +105,7 @@ function NotificationBell() {
                                 setOpen(false);
                                 navigate("/notifications");
                             }}
-                            className="text-sm font-semibold text-orange-600 hover:text-orange-700"
+                            className="text-sm font-semibold text-brand-600 hover:text-brand-700"
                         >
                             View all
                         </button>
@@ -113,14 +115,14 @@ function NotificationBell() {
                         {loading ? (
                             <p className="px-5 py-8 text-center text-sm text-gray-500">Loading notifications...</p>
                         ) : notifications.length === 0 ? (
-                            <p className="px-5 py-8 text-center text-sm text-gray-500">You are all caught up.</p>
+                            <div className="px-5 py-9 text-center text-sm text-gray-500"><CheckCheck className="mx-auto mb-3 text-brand-500" size={24} aria-hidden="true" />You are all caught up.</div>
                         ) : notifications.map((notification) => (
                             <button
                                 key={notification.id}
                                 type="button"
                                 onClick={() => openNotification(notification)}
-                                className={`block w-full border-b border-gray-50 px-5 py-4 text-left transition hover:bg-orange-50 ${
-                                    notification.read ? "bg-white" : "bg-orange-50/60"
+                                className={`block w-full border-b border-gray-50 px-5 py-4 text-left transition hover:bg-brand-50 ${
+                                    notification.read ? "bg-white" : "bg-brand-50/60"
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-3">

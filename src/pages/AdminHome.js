@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BadgeCheck, CalendarDays, FileCheck2, LayoutDashboard, LogOut, ShieldAlert, UserCog, UserRound, Users } from "lucide-react";
 import api from "../api/axios";
+import BrandMark from "../components/BrandMark";
 import NotificationBell from "../components/NotificationBell";
 import { getApiErrorMessage, issueStatusClasses } from "./workerUtils";
 
 const sections = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "approvals", label: "Manager Approvals" },
-    { id: "users", label: "Users" },
-    { id: "managers", label: "Managers" },
-    { id: "workers", label: "Workers" },
-    { id: "shifts", label: "Shifts" },
-    { id: "applications", label: "Applications" },
-    { id: "issues", label: "Issue Reports" },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "approvals", label: "Manager approvals", icon: BadgeCheck },
+    { id: "users", label: "Users", icon: Users },
+    { id: "managers", label: "Managers", icon: UserCog },
+    { id: "workers", label: "Workers", icon: UserRound },
+    { id: "shifts", label: "Shifts", icon: CalendarDays },
+    { id: "applications", label: "Applications", icon: FileCheck2 },
+    { id: "issues", label: "Issue reports", icon: ShieldAlert },
 ];
 
 const getSavedUser = () => JSON.parse(localStorage.getItem("user") || "null");
@@ -229,18 +231,18 @@ function AdminHome() {
     };
 
     const renderFilters = (showShiftFilters = false, showApplicationFilters = false) => (
-        <div className="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-xl lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-card lg:flex-row lg:items-center">
             <input
                 type="text"
                 value={userSearch}
                 onChange={(event) => setUserSearch(event.target.value)}
                 placeholder="Search by name, email, restaurant, or location"
-                className="w-full rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="w-full rounded-2xl border border-brand-200 px-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
             />
             <select
                 value={userStatusFilter}
                 onChange={(event) => setUserStatusFilter(event.target.value)}
-                className="rounded-2xl border border-orange-200 px-4 py-3"
+                className="rounded-2xl border border-brand-200 px-4 py-3"
             >
                 <option value="ALL">All Statuses</option>
                 <option value="PENDING">Pending</option>
@@ -252,7 +254,7 @@ function AdminHome() {
                 <select
                     value={shiftStatusFilter}
                     onChange={(event) => setShiftStatusFilter(event.target.value)}
-                    className="rounded-2xl border border-orange-200 px-4 py-3"
+                    className="rounded-2xl border border-brand-200 px-4 py-3"
                 >
                     <option value="ALL">All Shift Statuses</option>
                     <option value="OPEN">Open</option>
@@ -264,7 +266,7 @@ function AdminHome() {
                 <select
                     value={applicationStatusFilter}
                     onChange={(event) => setApplicationStatusFilter(event.target.value)}
-                    className="rounded-2xl border border-orange-200 px-4 py-3"
+                    className="rounded-2xl border border-brand-200 px-4 py-3"
                 >
                     <option value="ALL">All Application Statuses</option>
                     <option value="PENDING">Pending</option>
@@ -276,7 +278,7 @@ function AdminHome() {
                 <select
                     value={issueStatusFilter}
                     onChange={(event) => setIssueStatusFilter(event.target.value)}
-                    className="rounded-2xl border border-orange-200 px-4 py-3"
+                    className="rounded-2xl border border-brand-200 px-4 py-3"
                 >
                     <option value="ALL">All Issue Statuses</option>
                     <option value="OPEN">Open</option>
@@ -288,9 +290,9 @@ function AdminHome() {
     );
 
     const renderUserTable = (list) => (
-        <div className="overflow-x-auto rounded-3xl bg-white shadow-xl">
+        <div className="overflow-x-auto rounded-3xl border border-gray-100 bg-white shadow-card">
             <table className="min-w-full text-left text-sm">
-                <thead className="bg-orange-50 text-gray-600">
+                <thead className="bg-brand-50 text-gray-600">
                 <tr>
                     <th className="px-5 py-4 font-semibold">User</th>
                     <th className="px-5 py-4 font-semibold">Role</th>
@@ -302,7 +304,7 @@ function AdminHome() {
                 </thead>
                 <tbody>
                 {list.map((currentUser) => (
-                    <tr key={currentUser.id} className="border-t border-orange-100 align-top">
+                    <tr key={currentUser.id} className="border-t border-brand-100 align-top">
                         <td className="px-5 py-4">
                             <p className="font-semibold text-gray-900">{currentUser.name}</p>
                             <p className="text-gray-500">{currentUser.email}</p>
@@ -312,7 +314,7 @@ function AdminHome() {
                             <select
                                 value={currentUser.role}
                                 onChange={(event) => handleRoleUpdate(currentUser.id, event.target.value)}
-                                className="rounded-xl border border-orange-200 px-3 py-2"
+                                className="rounded-xl border border-brand-200 px-3 py-2"
                                 disabled={busyKey.startsWith(`user-role-${currentUser.id}`)}
                             >
                                 <option value="ADMIN">ADMIN</option>
@@ -321,7 +323,7 @@ function AdminHome() {
                             </select>
                         </td>
                         <td className="px-5 py-4">
-                            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                            <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
                                 {currentUser.status || "ACTIVE"}
                             </span>
                         </td>
@@ -338,7 +340,7 @@ function AdminHome() {
                                         type="button"
                                         onClick={() => handleStatusUpdate(currentUser.id, status)}
                                         disabled={busyKey === `user-status-${currentUser.id}-${status}`}
-                                        className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="rounded-xl border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {busyKey === `user-status-${currentUser.id}-${status}` ? "Updating..." : status}
                                     </button>
@@ -353,49 +355,57 @@ function AdminHome() {
     );
 
     return (
-        <div className="min-h-screen bg-[#fff7ef] text-gray-900">
+        <div className="min-h-screen bg-canvas text-gray-900">
             <div className="flex min-h-screen flex-col lg:flex-row">
-                <aside className="bg-[#1f2937] px-6 py-8 text-white lg:w-72">
-                    <div className="mb-10">
-                        <p className="text-sm uppercase tracking-[0.35em] text-orange-200">HubPin</p>
-                        <h1 className="mt-3 text-3xl font-bold">Admin Control</h1>
-                        <p className="mt-3 text-sm text-slate-300">
-                            Secure the platform, approve managers, and moderate the live marketplace.
-                        </p>
+                <aside className="bg-brand-950 px-5 py-5 text-white lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:px-6 lg:py-8">
+                    <div className="mb-5 lg:mb-10">
+                        <BrandMark light subtitle="Admin operations" />
                     </div>
 
-                    <nav className="space-y-3">
-                        {sections.map((section) => (
+                    <nav className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0" aria-label="Admin navigation">
+                        {sections.map((section) => {
+                            const Icon = section.icon;
+                            return (
                             <button
                                 key={section.id}
                                 type="button"
                                 onClick={() => setActiveSection(section.id)}
-                                className={`w-full rounded-2xl px-4 py-3 text-left transition ${
+                                aria-current={activeSection === section.id ? "page" : undefined}
+                                className={`inline-flex min-h-11 shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold transition lg:w-full ${
                                     activeSection === section.id
-                                        ? "bg-orange-500 text-white shadow-lg"
-                                        : "bg-white/5 text-slate-200 hover:bg-white/10"
+                                        ? "bg-brand-600 text-white shadow-card"
+                                        : "text-brand-100 hover:bg-white/10 hover:text-white"
                                 }`}
                             >
+                                <Icon size={18} aria-hidden="true" />
                                 {section.label}
                             </button>
-                        ))}
+                            );
+                        })}
                     </nav>
                 </aside>
 
                 <main className="flex-1 px-6 py-8 md:px-10">
-                    <div className="mb-8 flex items-center justify-end gap-3">
+                    <div className="mb-8 flex items-start justify-between gap-4">
+                        <div>
+                            <p className="jh-eyebrow">Admin workspace</p>
+                            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">{sections.find((section) => section.id === activeSection)?.label}</h1>
+                        </div>
+                        <div className="flex items-center gap-2">
                         <NotificationBell />
                         <button
                             type="button"
                             onClick={handleLogout}
-                            className="rounded-2xl border border-orange-300 px-5 py-3 font-semibold text-orange-600 hover:bg-orange-50"
+                            className="grid h-11 w-11 place-items-center rounded-xl border border-gray-200 bg-white text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                            aria-label="Log out"
                         >
-                            Logout
+                            <LogOut size={18} aria-hidden="true" />
                         </button>
+                        </div>
                     </div>
 
                     {feedback && (
-                        <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                        <div className="mb-6 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                             {feedback}
                         </div>
                     )}
@@ -404,21 +414,21 @@ function AdminHome() {
                         <div className="space-y-8">
                             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                                 {statCards.map((card) => (
-                                    <div key={card.label} className="rounded-[2rem] bg-white p-6 shadow-xl">
-                                        <p className="text-sm uppercase tracking-[0.25em] text-orange-500">{card.label}</p>
+                                    <div key={card.label} className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                                        <p className="text-sm uppercase tracking-[0.25em] text-brand-500">{card.label}</p>
                                         <p className="mt-4 text-4xl font-bold text-gray-900">{card.value}</p>
                                     </div>
                                 ))}
                             </div>
 
                             <div className="grid gap-8 xl:grid-cols-3">
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Approval Queue</h3>
                                     <p className="mt-2 text-sm text-gray-500">Managers waiting for review.</p>
                                     <div className="mt-5 space-y-4">
                                         {pendingManagers.length > 0 ? (
                                             pendingManagers.slice(0, 4).map((manager) => (
-                                                <div key={manager.id} className="rounded-3xl border border-orange-100 bg-orange-50/60 p-4">
+                                                <div key={manager.id} className="rounded-3xl border border-brand-100 bg-brand-50/60 p-4">
                                                     <p className="font-semibold text-gray-900">{manager.name}</p>
                                                     <p className="text-sm text-gray-600">{manager.restaurantName}</p>
                                                     <p className="text-sm text-gray-500">{manager.location}</p>
@@ -430,37 +440,37 @@ function AdminHome() {
                                     </div>
                                 </section>
 
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Shift Health</h3>
                                     <div className="mt-5 space-y-4">
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Open</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Open</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.openShifts || 0}</p>
                                         </div>
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Filled</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Filled</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.filledShifts || 0}</p>
                                         </div>
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Cancelled</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Cancelled</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.cancelledShifts || 0}</p>
                                         </div>
                                     </div>
                                 </section>
 
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Application Pipeline</h3>
                                     <div className="mt-5 space-y-4">
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Pending</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Pending</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.pendingApplications || 0}</p>
                                         </div>
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Accepted</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Accepted</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.acceptedApplications || 0}</p>
                                         </div>
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Rejected</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Rejected</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.rejectedApplications || 0}</p>
                                         </div>
                                     </div>
@@ -468,40 +478,40 @@ function AdminHome() {
                             </div>
 
                             <div className="grid gap-8 xl:grid-cols-3">
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Payments</h3>
                                     <div className="mt-5 space-y-4">
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Paid Completed</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Paid Completed</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.paidCompletedShifts || 0}</p>
                                         </div>
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Unpaid Completed</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Unpaid Completed</p>
                                             <p className="mt-2 text-3xl font-bold">{overview?.unpaidCompletedShifts || 0}</p>
                                         </div>
                                     </div>
                                 </section>
 
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Average Ratings</h3>
                                     <div className="mt-5 space-y-4">
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Managers</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Managers</p>
                                             <p className="mt-2 text-3xl font-bold">{Number(overview?.averageManagerRating || 0).toFixed(1)}</p>
                                         </div>
-                                        <div className="rounded-3xl border border-orange-100 p-4">
-                                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Workers</p>
+                                        <div className="rounded-3xl border border-brand-100 p-4">
+                                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Workers</p>
                                             <p className="mt-2 text-3xl font-bold">{Number(overview?.averageWorkerRating || 0).toFixed(1)}</p>
                                         </div>
                                     </div>
                                 </section>
 
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Recent Completed Shifts</h3>
                                     <div className="mt-5 space-y-4">
                                         {overview?.recentCompletedShifts?.length > 0 ? (
                                             overview.recentCompletedShifts.map((shift) => (
-                                                <div key={shift.id} className="rounded-3xl border border-orange-100 bg-orange-50/50 p-4">
+                                                <div key={shift.id} className="rounded-3xl border border-brand-100 bg-brand-50/50 p-4">
                                                     <p className="font-semibold text-gray-900">{shift.title}</p>
                                                     <p className="text-sm text-gray-600">{shift.manager?.restaurantName || shift.manager?.name}</p>
                                                     <p className="text-sm text-gray-500">{shift.location}</p>
@@ -515,16 +525,16 @@ function AdminHome() {
                             </div>
 
                             <div className="grid gap-8 xl:grid-cols-3">
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Top Managers</h3>
                                     <div className="mt-5 space-y-4">
                                         {overview?.topManagers?.length > 0 ? (
                                             overview.topManagers.map((manager) => (
-                                                <div key={manager.id} className="rounded-3xl border border-orange-100 p-4">
+                                                <div key={manager.id} className="rounded-3xl border border-brand-100 p-4">
                                                     <p className="font-semibold text-gray-900">{manager.name}</p>
                                                     <p className="text-sm text-gray-600">{manager.restaurantName || manager.email}</p>
                                                     <p className="mt-1 text-sm text-gray-500">
-                                                        Rating {Number(manager.rating || 0).toFixed(1)} • {manager.completedShiftsCount || 0} completed
+                                                        Rating {Number(manager.rating || 0).toFixed(1)} · {manager.completedShiftsCount || 0} completed
                                                     </p>
                                                 </div>
                                             ))
@@ -534,16 +544,16 @@ function AdminHome() {
                                     </div>
                                 </section>
 
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Top Workers</h3>
                                     <div className="mt-5 space-y-4">
                                         {overview?.topWorkers?.length > 0 ? (
                                             overview.topWorkers.map((worker) => (
-                                                <div key={worker.id} className="rounded-3xl border border-orange-100 p-4">
+                                                <div key={worker.id} className="rounded-3xl border border-brand-100 p-4">
                                                     <p className="font-semibold text-gray-900">{worker.name}</p>
                                                     <p className="text-sm text-gray-600">{worker.location || worker.email}</p>
                                                     <p className="mt-1 text-sm text-gray-500">
-                                                        Rating {Number(worker.rating || 0).toFixed(1)} • {worker.completedShiftsCount || 0} completed
+                                                        Rating {Number(worker.rating || 0).toFixed(1)} · {worker.completedShiftsCount || 0} completed
                                                     </p>
                                                 </div>
                                             ))
@@ -553,16 +563,16 @@ function AdminHome() {
                                     </div>
                                 </section>
 
-                                <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                     <h3 className="text-2xl font-bold">Recent Ratings</h3>
                                     <div className="mt-5 space-y-4">
                                         {overview?.recentRatings?.length > 0 ? (
                                             overview.recentRatings.map((application) => (
-                                                <div key={application.id} className="rounded-3xl border border-orange-100 p-4">
+                                                <div key={application.id} className="rounded-3xl border border-brand-100 p-4">
                                                     <p className="font-semibold text-gray-900">{application.shift?.title || "Completed shift"}</p>
                                                     <p className="text-sm text-gray-600">{application.worker?.name || "Worker"}</p>
                                                     <p className="mt-1 text-sm text-gray-500">
-                                                        Worker rated: {application.workerRating || "-"} • Manager rated: {application.managerRating || "-"}
+                                                        Worker rated: {application.workerRating || "-"} · Manager rated: {application.managerRating || "-"}
                                                     </p>
                                                 </div>
                                             ))
@@ -585,13 +595,13 @@ function AdminHome() {
                             <div className="grid gap-6 xl:grid-cols-2">
                                 {pendingManagers.length > 0 ? (
                                     pendingManagers.map((manager) => (
-                                        <article key={manager.id} className="rounded-[2rem] bg-white p-6 shadow-xl">
+                                        <article key={manager.id} className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                                             <div className="flex items-start justify-between gap-4">
                                                 <div>
                                                     <h4 className="text-xl font-bold text-gray-900">{manager.name}</h4>
                                                     <p className="text-gray-500">{manager.email}</p>
                                                 </div>
-                                                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                                                <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
                                                     {manager.status}
                                                 </span>
                                             </div>
@@ -608,7 +618,7 @@ function AdminHome() {
                                                     type="button"
                                                     onClick={() => handleStatusUpdate(manager.id, "ACTIVE")}
                                                     disabled={busyKey === `user-status-${manager.id}-ACTIVE`}
-                                                    className="rounded-2xl bg-orange-500 px-4 py-3 font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
+                                                    className="rounded-2xl bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
                                                 >
                                                     {busyKey === `user-status-${manager.id}-ACTIVE` ? "Approving..." : "Approve"}
                                                 </button>
@@ -616,7 +626,7 @@ function AdminHome() {
                                                     type="button"
                                                     onClick={() => handleStatusUpdate(manager.id, "REJECTED")}
                                                     disabled={busyKey === `user-status-${manager.id}-REJECTED`}
-                                                    className="rounded-2xl border border-orange-300 px-4 py-3 font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
+                                                    className="rounded-2xl border border-brand-300 px-4 py-3 font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-60"
                                                 >
                                                     {busyKey === `user-status-${manager.id}-REJECTED` ? "Rejecting..." : "Reject"}
                                                 </button>
@@ -624,7 +634,7 @@ function AdminHome() {
                                         </article>
                                     ))
                                 ) : (
-                                    <div className="rounded-[2rem] bg-white p-6 text-gray-600 shadow-xl">
+                                    <div className="rounded-3xl bg-white p-6 text-gray-600 shadow-card">
                                         No pending manager accounts right now.
                                     </div>
                                 )}
@@ -672,9 +682,9 @@ function AdminHome() {
                                 <p className="mt-2 text-gray-600">Change shift status or remove listings that should no longer be live.</p>
                             </div>
                             {renderFilters(true, false)}
-                            <div className="overflow-x-auto rounded-3xl bg-white shadow-xl">
+                            <div className="overflow-x-auto rounded-3xl border border-gray-100 bg-white shadow-card">
                                 <table className="min-w-full text-left text-sm">
-                                    <thead className="bg-orange-50 text-gray-600">
+                                    <thead className="bg-brand-50 text-gray-600">
                                     <tr>
                                         <th className="px-5 py-4 font-semibold">Shift</th>
                                         <th className="px-5 py-4 font-semibold">Manager</th>
@@ -685,7 +695,7 @@ function AdminHome() {
                                     </thead>
                                     <tbody>
                                     {filteredShifts.map((shift) => (
-                                        <tr key={shift.id} className="border-t border-orange-100 align-top">
+                                        <tr key={shift.id} className="border-t border-brand-100 align-top">
                                             <td className="px-5 py-4">
                                                 <p className="font-semibold text-gray-900">{shift.title}</p>
                                                 <p className="text-gray-500">{shift.roleNeeded}</p>
@@ -696,7 +706,7 @@ function AdminHome() {
                                                 <p>{shift.manager?.restaurantName || "N/A"}</p>
                                             </td>
                                             <td className="px-5 py-4">
-                                                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                                                <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
                                                     {shift.status || "OPEN"}
                                                 </span>
                                             </td>
@@ -713,7 +723,7 @@ function AdminHome() {
                                                             type="button"
                                                             onClick={() => handleShiftStatus(shift.id, status)}
                                                             disabled={busyKey === `shift-status-${shift.id}-${status}`}
-                                                            className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                            className="rounded-xl border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                         >
                                                             {busyKey === `shift-status-${shift.id}-${status}` ? "Updating..." : status}
                                                         </button>
@@ -743,9 +753,9 @@ function AdminHome() {
                                 <p className="mt-2 text-gray-600">Resolve applications directly from the admin panel.</p>
                             </div>
                             {renderFilters(false, true)}
-                            <div className="overflow-x-auto rounded-3xl bg-white shadow-xl">
+                            <div className="overflow-x-auto rounded-3xl border border-gray-100 bg-white shadow-card">
                                 <table className="min-w-full text-left text-sm">
-                                    <thead className="bg-orange-50 text-gray-600">
+                                    <thead className="bg-brand-50 text-gray-600">
                                     <tr>
                                         <th className="px-5 py-4 font-semibold">Worker</th>
                                         <th className="px-5 py-4 font-semibold">Shift</th>
@@ -756,7 +766,7 @@ function AdminHome() {
                                     </thead>
                                     <tbody>
                                     {filteredApplications.map((application) => (
-                                        <tr key={application.id} className="border-t border-orange-100 align-top">
+                                        <tr key={application.id} className="border-t border-brand-100 align-top">
                                             <td className="px-5 py-4 text-gray-700">
                                                 <p className="font-semibold">{application.worker?.name || "N/A"}</p>
                                                 <p>{application.worker?.email || "N/A"}</p>
@@ -770,7 +780,7 @@ function AdminHome() {
                                                 <p>{application.shift?.manager?.restaurantName || "N/A"}</p>
                                             </td>
                                             <td className="px-5 py-4">
-                                                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                                                <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
                                                     {application.status}
                                                 </span>
                                                 <p className="mt-2 text-xs text-gray-500">{formatDate(application.createdAt)}</p>
@@ -783,7 +793,7 @@ function AdminHome() {
                                                             type="button"
                                                             onClick={() => handleApplicationStatus(application.id, status)}
                                                             disabled={busyKey === `application-status-${application.id}-${status}`}
-                                                            className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                            className="rounded-xl border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                         >
                                                             {busyKey === `application-status-${application.id}-${status}` ? "Updating..." : status}
                                                         </button>
@@ -805,9 +815,9 @@ function AdminHome() {
                                 <p className="mt-2 text-gray-600">Track worker and manager reports for disputes, payment questions, and shift problems.</p>
                             </div>
                             {renderFilters(false, "issues")}
-                            <div className="overflow-x-auto rounded-3xl bg-white shadow-xl">
+                            <div className="overflow-x-auto rounded-3xl border border-gray-100 bg-white shadow-card">
                                 <table className="min-w-full text-left text-sm">
-                                    <thead className="bg-orange-50 text-gray-600">
+                                    <thead className="bg-brand-50 text-gray-600">
                                     <tr>
                                         <th className="px-5 py-4 font-semibold">Reporter</th>
                                         <th className="px-5 py-4 font-semibold">Shift</th>
@@ -818,7 +828,7 @@ function AdminHome() {
                                     </thead>
                                     <tbody>
                                     {filteredIssues.map((issue) => (
-                                        <tr key={issue.id} className="border-t border-orange-100 align-top">
+                                        <tr key={issue.id} className="border-t border-brand-100 align-top">
                                             <td className="px-5 py-4 text-gray-700">
                                                 <p className="font-semibold">{issue.reportedBy?.name || "N/A"}</p>
                                                 <p>{issue.reportedBy?.email || "N/A"}</p>
@@ -845,7 +855,7 @@ function AdminHome() {
                                                             type="button"
                                                             onClick={() => handleIssueStatus(issue.id, status)}
                                                             disabled={busyKey === `issue-status-${issue.id}-${status}`}
-                                                            className="rounded-xl border border-orange-200 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                            className="rounded-xl border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
                                                         >
                                                             {busyKey === `issue-status-${issue.id}-${status}` ? "Updating..." : status}
                                                         </button>

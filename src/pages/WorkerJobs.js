@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
 import WorkerJobCard from "../components/WorkerJobCard";
+import PageHeader from "../components/ui/PageHeader";
 import api from "../api/axios";
 import {
     getNotificationButtonLabel,
@@ -82,7 +83,7 @@ function WorkerJobs() {
 
     useEffect(() => {
         if (notificationPermission === "granted" && notificationsEnabled && reminders.length > 0) {
-            notifyOnce(`worker-reminder-${reminders.join("|")}`, "HubPin update", reminders[0], notificationsEnabled);
+            notifyOnce(`worker-reminder-${reminders.join("|")}`, "JobHub update", reminders[0], notificationsEnabled);
         }
     }, [notificationPermission, notificationsEnabled, reminders]);
 
@@ -220,7 +221,7 @@ function WorkerJobs() {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+        <div className="jh-page">
             <WorkerHeader
                 userName={profile?.name || user?.name}
                 notificationLabel={getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
@@ -228,11 +229,8 @@ function WorkerJobs() {
                 onToggleNotifications={handleToggleNotifications}
             />
 
-            <div className="px-8 py-12 md:px-20">
-                <div className="mb-8">
-                    <p className="text-sm uppercase tracking-[0.3em] text-orange-500">My Jobs</p>
-                    <h2 className="mt-3 text-4xl font-bold text-gray-900">Applications, history, and saved jobs</h2>
-                </div>
+            <div className="jh-container py-8 sm:py-10 lg:py-12">
+                <PageHeader eyebrow="My jobs" title="Applications, history, and saved jobs" description="Follow every application from first click to completed shift, feedback, and payment." />
 
                 <div className="mb-8 flex flex-wrap gap-3">
                     {tabs.map((tab) => (
@@ -242,8 +240,8 @@ function WorkerJobs() {
                             onClick={() => setActiveTab(tab.id)}
                             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                                 activeTab === tab.id
-                                    ? "bg-orange-500 text-white shadow-md"
-                                    : "border border-orange-200 bg-white text-orange-600 hover:bg-orange-50"
+                                    ? "bg-brand-600 text-white shadow-md"
+                                    : "border border-brand-200 bg-white text-brand-600 hover:bg-brand-50"
                             }`}
                         >
                             {tab.label}
@@ -252,18 +250,8 @@ function WorkerJobs() {
                 </div>
 
                 {feedback && (
-                    <div className="mb-8 max-w-3xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                    <div className="mb-8 max-w-3xl rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                         {feedback}
-                    </div>
-                )}
-
-                {reminders.length > 0 && (
-                    <div className="mb-8 grid gap-3 rounded-3xl border border-orange-100 bg-white p-5 shadow-lg md:grid-cols-2">
-                        {reminders.map((reminder) => (
-                            <div key={reminder} className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700">
-                                {reminder}
-                            </div>
-                        ))}
                     </div>
                 )}
 
@@ -271,7 +259,7 @@ function WorkerJobs() {
                     <div className="grid gap-4 lg:grid-cols-2">
                         {appliedApplications.length > 0 ? (
                             appliedApplications.map((application) => (
-                                <div key={application.id} className="rounded-3xl border border-gray-100 bg-white p-5 shadow-lg">
+                                <div key={application.id} className="rounded-3xl border border-gray-100 bg-white p-5 shadow-card">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <p className="text-lg font-semibold text-gray-900">{application.shift?.title}</p>
@@ -294,7 +282,7 @@ function WorkerJobs() {
                                         <button
                                             type="button"
                                             onClick={() => navigate(`/shift-chat/${application.shift?.id}`)}
-                                            className="mt-4 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                                            className="mt-4 rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
                                         >
                                             Open shift chat
                                         </button>
@@ -305,7 +293,7 @@ function WorkerJobs() {
                                             <select
                                                 value={(issueDrafts[application.id] || emptyIssueDraft).category}
                                                 onChange={(event) => handleIssueDraftChange(application.id, "category", event.target.value)}
-                                                className="rounded-xl border border-orange-200 px-3 py-2"
+                                                className="rounded-xl border border-brand-200 px-3 py-2"
                                             >
                                                 <option value="GENERAL">General</option>
                                                 <option value="PAYMENT">Payment</option>
@@ -318,14 +306,14 @@ function WorkerJobs() {
                                                 value={(issueDrafts[application.id] || emptyIssueDraft).description}
                                                 onChange={(event) => handleIssueDraftChange(application.id, "description", event.target.value)}
                                                 placeholder="Describe the problem for admin review"
-                                                className="rounded-xl border border-orange-200 px-3 py-2"
+                                                className="rounded-xl border border-brand-200 px-3 py-2"
                                             />
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => handleSubmitIssue(application)}
                                             disabled={submittingIssueId === application.id}
-                                            className="mt-3 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
+                                            className="mt-3 rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-60"
                                         >
                                             {submittingIssueId === application.id ? "Submitting..." : "Submit issue"}
                                         </button>
@@ -346,7 +334,7 @@ function WorkerJobs() {
                                 const alreadyRated = application.managerRating != null;
 
                                 return (
-                                    <div key={application.id} className="rounded-3xl border border-gray-100 bg-white p-5 shadow-lg">
+                                    <div key={application.id} className="rounded-3xl border border-gray-100 bg-white p-5 shadow-card">
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
                                                 <p className="text-lg font-semibold text-gray-900">{application.shift?.title}</p>
@@ -364,7 +352,7 @@ function WorkerJobs() {
                                         <button
                                             type="button"
                                             onClick={() => navigate(`/shift-chat/${application.shift?.id}`)}
-                                            className="mt-4 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                                            className="mt-4 rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
                                         >
                                             Open shift chat
                                         </button>
@@ -379,7 +367,7 @@ function WorkerJobs() {
                                                 <select
                                                     value={draft.rating}
                                                     onChange={(event) => handleRatingDraftChange(application.id, "rating", event.target.value)}
-                                                    className="rounded-xl border border-orange-200 px-3 py-2"
+                                                    className="rounded-xl border border-brand-200 px-3 py-2"
                                                 >
                                                     {[5, 4, 3, 2, 1].map((value) => (
                                                         <option key={value} value={value}>{value}</option>
@@ -389,13 +377,13 @@ function WorkerJobs() {
                                                     value={draft.review}
                                                     onChange={(event) => handleRatingDraftChange(application.id, "review", event.target.value)}
                                                     placeholder="Share how the shift went"
-                                                    className="min-h-[96px] w-full rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                                    className="min-h-[96px] w-full rounded-2xl border border-brand-200 px-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => handleSubmitRating(application.id)}
                                                     disabled={submittingRatingId === application.id}
-                                                    className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                                                    className="rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
                                                 >
                                                     {submittingRatingId === application.id ? "Saving..." : "Submit rating"}
                                                 </button>
@@ -408,13 +396,13 @@ function WorkerJobs() {
                                                 value={(issueDrafts[application.id] || emptyIssueDraft).description}
                                                 onChange={(event) => handleIssueDraftChange(application.id, "description", event.target.value)}
                                                 placeholder="Describe a payment, safety, or shift issue"
-                                                className="mt-3 w-full rounded-xl border border-orange-200 px-3 py-2"
+                                                className="mt-3 w-full rounded-xl border border-brand-200 px-3 py-2"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => handleSubmitIssue(application)}
                                                 disabled={submittingIssueId === application.id}
-                                                className="mt-3 rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60"
+                                                className="mt-3 rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-60"
                                             >
                                                 {submittingIssueId === application.id ? "Submitting..." : "Submit issue"}
                                             </button>
@@ -454,7 +442,7 @@ function WorkerJobs() {
                     <div className="grid gap-5 lg:grid-cols-2">
                         {issues.length > 0 ? (
                             issues.map((issue) => (
-                                <div key={issue.id} className="rounded-3xl border border-gray-100 bg-white p-5 shadow-lg">
+                                <div key={issue.id} className="rounded-3xl border border-gray-100 bg-white p-5 shadow-card">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <p className="text-lg font-semibold text-gray-900">{issue.shift?.title || "Reported issue"}</p>

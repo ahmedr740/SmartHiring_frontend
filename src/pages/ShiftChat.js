@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, BellRing, Send } from "lucide-react";
 import api from "../api/axios";
+import BrandMark from "../components/BrandMark";
 import {
     getNotificationButtonLabel,
     getNotificationPermission,
@@ -55,7 +57,7 @@ function ShiftChat() {
             const message = JSON.parse(event.data);
             setMessages((current) => current.some((existing) => existing.id === message.id) ? current : [...current, message]);
             if (message.sender?.id !== user.id) {
-                notifyOnce(`chat-${message.id}`, "New HubPin chat message", message.message, notificationsEnabled);
+                notifyOnce(`chat-${message.id}`, "New JobHub chat message", message.message, notificationsEnabled);
             }
         };
         socket.onerror = () => setFeedback("Live chat connection is unavailable. Messages still save through the server.");
@@ -94,38 +96,38 @@ function ShiftChat() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
-            <div className="flex flex-col gap-4 bg-white px-8 py-6 shadow-sm md:flex-row md:items-center md:justify-between md:px-20">
-                <div>
-                    <h1 className="text-2xl font-bold text-orange-600">HubPin</h1>
-                    <p className="text-sm text-gray-500">Shift chat</p>
-                </div>
-                <div className="flex flex-wrap gap-3">
+        <div className="jh-page">
+            <header className="border-b border-brand-100/80 bg-white/95 shadow-sm backdrop-blur-xl">
+                <div className="jh-container flex min-h-20 flex-wrap items-center justify-between gap-4">
+                    <BrandMark subtitle="Shift conversation" />
+                    <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
                         onClick={handleToggleNotifications}
-                        className="rounded-xl border border-orange-200 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50"
+                        className="hidden min-h-11 items-center gap-2 rounded-xl border border-brand-200 px-4 py-2 text-sm font-bold text-brand-700 hover:bg-brand-50 sm:inline-flex"
+                        aria-pressed={notificationsEnabled}
                     >
-                        {getNotificationButtonLabel(permission, notificationsEnabled)}
+                        <BellRing size={16} aria-hidden="true" /> {getNotificationButtonLabel(permission, notificationsEnabled)}
                     </button>
                     <button
                         type="button"
                         onClick={goBack}
-                        className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700"
                     >
-                        Back
+                        <ArrowLeft size={17} aria-hidden="true" /> Back
                     </button>
+                    </div>
                 </div>
-            </div>
+            </header>
 
             <main className="mx-auto max-w-5xl px-6 py-10">
                 {feedback && (
-                    <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                    <div className="mb-6 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                         {feedback}
                     </div>
                 )}
 
-                <section className="rounded-3xl bg-white p-6 shadow-xl">
+                <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                     <div className="mb-5">
                         <h2 className="text-3xl font-bold text-gray-900">Accepted shift conversation</h2>
                         <p className="mt-2 text-gray-600">Messages are saved and shown live to the manager and accepted worker.</p>
@@ -137,7 +139,7 @@ function ShiftChat() {
                                 const isMine = message.sender?.id === user?.id;
                                 return (
                                     <div key={message.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                                        <div className={`max-w-[78%] rounded-3xl px-4 py-3 ${isMine ? "bg-orange-500 text-white" : "bg-white text-gray-800"}`}>
+                                        <div className={`max-w-[78%] rounded-3xl px-4 py-3 ${isMine ? "bg-brand-600 text-white" : "bg-white text-gray-800"}`}>
                                             <p className="text-xs font-semibold opacity-80">{message.sender?.name || "User"}</p>
                                             <p className="mt-1">{message.message}</p>
                                             <p className="mt-2 text-xs opacity-70">
@@ -158,14 +160,15 @@ function ShiftChat() {
                             value={draft}
                             onChange={(event) => setDraft(event.target.value)}
                             placeholder="Type a message"
-                            className="flex-1 rounded-2xl border border-orange-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                            className="jh-field flex-1"
+                            aria-label="Message"
                         />
                         <button
                             type="submit"
                             disabled={isSending || !draft.trim()}
-                            className="rounded-2xl bg-orange-500 px-6 py-3 font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-300"
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 font-bold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
                         >
-                            {isSending ? "Sending..." : "Send"}
+                            <Send size={17} aria-hidden="true" /> {isSending ? "Sending…" : "Send"}
                         </button>
                     </form>
                 </section>

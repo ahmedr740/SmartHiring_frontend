@@ -1,3 +1,106 @@
+@import "@fontsource-variable/manrope";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 bg-canvas font-sans text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a {
+    @apply transition-colors duration-200;
+  }
+
+  button {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply text-ink placeholder:text-gray-400;
+  }
+}
+
+@layer components {
+  .jh-page {
+    @apply min-h-screen bg-canvas text-ink;
+    background-image:
+      radial-gradient(circle at 8% 0%, rgba(15, 118, 110, 0.08), transparent 28rem),
+      radial-gradient(circle at 92% 12%, rgba(217, 104, 74, 0.08), transparent 24rem);
+  }
+
+  .jh-container {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-12;
+  }
+
+  .jh-panel {
+    @apply rounded-3xl border border-brand-100/80 bg-white shadow-card;
+  }
+
+  .jh-eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.24em] text-brand-700;
+  }
+
+  .jh-page-title {
+    @apply mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl;
+  }
+
+  .jh-page-copy {
+    @apply mt-3 max-w-2xl leading-7 text-gray-600;
+  }
+
+  .jh-field {
+    @apply min-h-12 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+  }
+
+  .jh-label {
+    @apply mb-2 block text-sm font-semibold text-gray-700;
+  }
+
+  .jh-primary-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-card hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300;
+  }
+
+  .jh-secondary-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-5 py-3 text-sm font-bold text-brand-700 hover:border-brand-300 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .jh-danger-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-5 py-3 text-sm font-bold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

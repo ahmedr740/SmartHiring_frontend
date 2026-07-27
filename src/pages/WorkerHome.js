@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
 import WorkerJobCard from "../components/WorkerJobCard";
+import PageHeader from "../components/ui/PageHeader";
 import api from "../api/axios";
 import {
     getNotificationButtonLabel,
@@ -139,7 +140,7 @@ function WorkerHome() {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+        <div className="jh-page">
             <WorkerHeader
                 userName={profile?.name || user?.name}
                 notificationLabel={getNotificationButtonLabel(notificationPermission, notificationsEnabled)}
@@ -147,21 +148,22 @@ function WorkerHome() {
                 onToggleNotifications={handleToggleNotifications}
             />
 
-            <div className="px-8 py-12 md:px-20">
+            <div className="jh-container py-8 sm:py-10 lg:py-12">
+                <PageHeader eyebrow="Worker dashboard" title={`Good to see you, ${(profile?.name || user?.name || "there").split(" ")[0]}`} description="Track your progress, discover open shifts, and stay on top of upcoming work." />
                 <section className="mb-10">
                     <div className="grid gap-4 sm:grid-cols-3">
-                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Rating</p>
+                        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Rating</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{Number(profile?.rating || 0).toFixed(1)}</p>
                             <p className="mt-2 text-sm text-gray-500">{profile?.ratingCount || 0} reviews</p>
                         </div>
-                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Completed</p>
+                        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Completed</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{profile?.completedShiftsCount || 0}</p>
                             <p className="mt-2 text-sm text-gray-500">finished shifts</p>
                         </div>
-                        <div className="rounded-[2rem] bg-white p-6 shadow-xl">
-                            <p className="text-sm uppercase tracking-[0.2em] text-orange-500">Saved</p>
+                        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
+                            <p className="text-sm uppercase tracking-[0.2em] text-brand-500">Saved</p>
                             <p className="mt-3 text-4xl font-bold text-gray-900">{likedShiftIds.size}</p>
                             <p className="mt-2 text-sm text-gray-500">liked jobs</p>
                         </div>
@@ -169,7 +171,7 @@ function WorkerHome() {
                 </section>
 
                 {feedback && (
-                    <div className="mb-8 max-w-3xl rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                    <div className="mb-8 max-w-3xl rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
                         {feedback}
                     </div>
                 )}
@@ -187,7 +189,7 @@ function WorkerHome() {
                                 placeholder="Search title, role, location, or restaurant"
                                 value={search}
                                 onChange={(event) => setSearch(event.target.value)}
-                                className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
                             />
                         </div>
 
@@ -217,7 +219,7 @@ function WorkerHome() {
                     </div>
 
                     <div className="space-y-8">
-                        <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                        <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                             <div className="mb-4 flex items-center justify-between gap-3">
                                 <div>
                                     <h3 className="text-2xl font-bold text-gray-900">Upcoming Work</h3>
@@ -231,7 +233,7 @@ function WorkerHome() {
                             <div className="space-y-4">
                                 {upcomingApplications.length > 0 ? (
                                     upcomingApplications.map((application) => (
-                                        <div key={application.id} className="rounded-3xl border border-orange-100 bg-orange-50/50 p-4">
+                                        <div key={application.id} className="rounded-3xl border border-brand-100 bg-brand-50/50 p-4">
                                             <div className="flex items-start justify-between gap-3">
                                                 <div>
                                                     <p className="font-semibold text-gray-900">{application.shift?.title}</p>
@@ -253,7 +255,7 @@ function WorkerHome() {
                             </div>
                         </section>
 
-                        <section className="rounded-[2rem] bg-white p-6 shadow-xl">
+                        <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
                             <div className="mb-4">
                                 <h3 className="text-2xl font-bold text-gray-900">Application History</h3>
                                 <p className="mt-1 text-sm text-gray-500">Pending and rejected applications.</p>
