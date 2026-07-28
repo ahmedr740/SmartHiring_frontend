@@ -12,10 +12,16 @@ import ManagerProfile from "./pages/ManagerProfile";
 import ShiftChat from "./pages/ShiftChat";
 import AdminHome from "./pages/AdminHome";
 import Notifications from "./pages/Notifications";
+import LanguageRuntime from "./components/LanguageRuntime";
+import { useTranslation } from "react-i18next";
 
 function App() {
+    const { i18n } = useTranslation();
+    const language = i18n.resolvedLanguage || i18n.language || "en";
+
     return (
         <Router>
+            <LanguageRuntime language={language} />
             <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />

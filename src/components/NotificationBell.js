@@ -2,15 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, CheckCheck } from "lucide-react";
 import api from "../api/axios";
+import { formatRelativeTime } from "../i18n/formatters";
 
-const formatAge = (value) => {
-    if (!value) return "";
-    const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-    if (seconds < 60) return "now";
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-    return `${Math.floor(seconds / 86400)}d`;
-};
+const formatAge = (value) => formatRelativeTime(value);
 
 function NotificationBell() {
     const navigate = useNavigate();

@@ -33,7 +33,7 @@ module.exports = {
         ink: "#1f2d2d",
       },
       fontFamily: {
-        sans: ['"Manrope Variable"', "Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ['"Manrope Variable"', "Manrope", '"PingFang HK"', '"Microsoft JhengHei"', '"Noto Sans TC"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
         soft: "0 18px 50px -24px rgba(31, 45, 45, 0.28)",

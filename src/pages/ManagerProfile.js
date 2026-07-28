@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, CheckCircle2, LogOut, Mail, MapPin, Phone, Save, 
 import api from "../api/axios";
 import BrandMark from "../components/BrandMark";
 import NotificationBell from "../components/NotificationBell";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
 import { getApiErrorMessage, getSavedUser } from "./workerUtils";
@@ -96,6 +97,7 @@ function ManagerProfile() {
                 <div className="jh-container flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <BrandMark subtitle={`Manager · ${profile?.restaurantName || user?.restaurantName || "Restaurant profile"}`} />
                     <div className="flex items-center gap-2">
+                        <LanguageSwitcher compact />
                         <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate("/manager-home")}>Dashboard</Button>
                         <NotificationBell />
                         <button type="button" onClick={handleLogout} className="grid h-11 w-11 place-items-center rounded-xl border border-gray-200 bg-white text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700" aria-label="Log out">

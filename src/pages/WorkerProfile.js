@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
+import { formatDateTime as formatLocalizedDateTime } from "../i18n/formatters";
 import PageHeader from "../components/ui/PageHeader";
 import api from "../api/axios";
 import {
@@ -20,7 +21,7 @@ const formatDateTime = (value) => {
         return "Pending";
     }
 
-    return new Date(value).toLocaleString([], {
+    return formatLocalizedDateTime(value, {
         month: "short",
         day: "numeric",
         hour: "2-digit",

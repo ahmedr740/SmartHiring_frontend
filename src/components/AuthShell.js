@@ -1,5 +1,6 @@
 import { BadgeCheck, Sparkles, UsersRound } from "lucide-react";
 import BrandMark from "./BrandMark";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 function AuthShell({ eyebrow, title, description, children }) {
     return (
@@ -7,7 +8,7 @@ function AuthShell({ eyebrow, title, description, children }) {
             <aside className="relative hidden overflow-hidden bg-brand-900 p-12 text-white lg:flex lg:flex-col xl:p-16">
                 <div className="absolute -left-28 top-1/3 h-80 w-80 rounded-full bg-brand-600/50 blur-3xl" aria-hidden="true" />
                 <div className="absolute -bottom-28 -right-20 h-72 w-72 rounded-full bg-accent-500/30 blur-3xl" aria-hidden="true" />
-                <div className="relative z-10"><BrandMark light subtitle="Hospitality staffing" /></div>
+                <div className="relative z-10 flex items-start justify-between gap-4"><BrandMark light subtitle="Hospitality staffing" /><LanguageSwitcher light compact /></div>
                 <div className="relative z-10 my-auto max-w-lg py-16">
                     <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-200">Built for hospitality teams</p>
                     <h2 className="mt-5 text-5xl font-extrabold leading-tight tracking-[-0.04em]">The right people.<br />The right shift.<br /><span className="text-brand-200">Right when it matters.</span></h2>
@@ -28,7 +29,8 @@ function AuthShell({ eyebrow, title, description, children }) {
                 <p className="relative z-10 text-sm text-brand-200">© 2026 JobHub · Hong Kong</p>
             </aside>
 
-            <main className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
+            <main className="relative flex min-h-screen items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
+                <div className="absolute right-5 top-5 lg:hidden"><LanguageSwitcher compact /></div>
                 <div className="w-full max-w-xl">
                     <div className="mb-10 lg:hidden"><BrandMark subtitle="Hospitality staffing" /></div>
                     <div className="mb-8">

@@ -4,6 +4,8 @@ import { BellRing, LogOut, Plus, Store } from "lucide-react";
 import api from "../api/axios";
 import BrandMark from "../components/BrandMark";
 import NotificationBell from "../components/NotificationBell";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { formatDateTime } from "../i18n/formatters";
 import {
     getNotificationButtonLabel,
     getNotificationPermission,
@@ -765,7 +767,7 @@ function ManagerHome() {
                                 </button>
                             )}
                             <span className="text-sm text-gray-500">
-                                Completed {shift.completedAt ? new Date(shift.completedAt).toLocaleString() : "recently"}
+                                Completed {shift.completedAt ? formatDateTime(shift.completedAt) : "recently"}
                             </span>
                         </div>
                         {renderRatingPanel(acceptedApplication)}
@@ -798,6 +800,7 @@ function ManagerHome() {
                 <div className="jh-container flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
                     <BrandMark subtitle={`Manager · ${profile?.restaurantName || profile?.name || user?.name || "Workspace"}`} />
                     <div className="flex flex-wrap items-center gap-2">
+                    <LanguageSwitcher compact />
                     <button
                         type="button"
                         onClick={() => navigate("/manager-post-shift")}

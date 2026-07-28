@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
+import { formatDateTime } from "../i18n/formatters";
 import WorkerJobCard from "../components/WorkerJobCard";
 import PageHeader from "../components/ui/PageHeader";
 import api from "../api/axios";
@@ -346,7 +347,7 @@ function WorkerJobs() {
                                         </div>
 
                                         <p className="mt-3 text-sm text-gray-600">
-                                            Completed {application.shift?.completedAt ? new Date(application.shift.completedAt).toLocaleString() : "recently"}
+                                            Completed {application.shift?.completedAt ? formatDateTime(application.shift.completedAt) : "recently"}
                                         </p>
 
                                         <button
@@ -454,7 +455,7 @@ function WorkerJobs() {
                                     </div>
                                     <p className="mt-3 text-sm text-gray-600">{issue.description}</p>
                                     <p className="mt-3 text-xs text-gray-400">
-                                        Submitted {issue.createdAt ? new Date(issue.createdAt).toLocaleString() : "recently"}
+                                        Submitted {issue.createdAt ? formatDateTime(issue.createdAt) : "recently"}
                                     </p>
                                 </div>
                             ))

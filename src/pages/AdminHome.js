@@ -4,6 +4,8 @@ import { BadgeCheck, CalendarDays, FileCheck2, LayoutDashboard, LogOut, ShieldAl
 import api from "../api/axios";
 import BrandMark from "../components/BrandMark";
 import NotificationBell from "../components/NotificationBell";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { formatDateTime } from "../i18n/formatters";
 import { getApiErrorMessage, issueStatusClasses } from "./workerUtils";
 
 const sections = [
@@ -227,7 +229,7 @@ function AdminHome() {
             return "N/A";
         }
 
-        return new Date(value).toLocaleString();
+        return formatDateTime(value);
     };
 
     const renderFilters = (showShiftFilters = false, showApplicationFilters = false) => (
@@ -392,6 +394,7 @@ function AdminHome() {
                             <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">{sections.find((section) => section.id === activeSection)?.label}</h1>
                         </div>
                         <div className="flex items-center gap-2">
+                        <LanguageSwitcher compact />
                         <NotificationBell />
                         <button
                             type="button"

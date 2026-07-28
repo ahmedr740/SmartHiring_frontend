@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, BellRing, Send } from "lucide-react";
 import api from "../api/axios";
 import BrandMark from "../components/BrandMark";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { formatDateTime } from "../i18n/formatters";
 import {
     getNotificationButtonLabel,
     getNotificationPermission,
@@ -101,6 +103,7 @@ function ShiftChat() {
                 <div className="jh-container flex min-h-20 flex-wrap items-center justify-between gap-4">
                     <BrandMark subtitle="Shift conversation" />
                     <div className="flex flex-wrap gap-2">
+                    <LanguageSwitcher compact />
                     <button
                         type="button"
                         onClick={handleToggleNotifications}
@@ -143,7 +146,7 @@ function ShiftChat() {
                                             <p className="text-xs font-semibold opacity-80">{message.sender?.name || "User"}</p>
                                             <p className="mt-1">{message.message}</p>
                                             <p className="mt-2 text-xs opacity-70">
-                                                {message.createdAt ? new Date(message.createdAt).toLocaleString() : "Just now"}
+                                                {message.createdAt ? formatDateTime(message.createdAt) : "Just now"}
                                             </p>
                                         </div>
                                     </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import BrandMark from "../components/BrandMark";
 import Button from "../components/ui/Button";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 const benefits = [
     {
@@ -49,6 +50,7 @@ function Landing() {
                 <nav className="jh-container flex min-h-20 items-center justify-between" aria-label="Main navigation">
                     <BrandMark subtitle="Hospitality staffing" />
                     <div className="flex items-center gap-2 sm:gap-3">
+                        <LanguageSwitcher compact />
                         <Button variant="ghost" onClick={() => navigate("/login")}>Log in</Button>
                         <Button onClick={() => navigate("/register")} className="hidden sm:inline-flex">Join JobHub</Button>
                         <Button onClick={() => navigate("/register")} className="sm:hidden" aria-label="Join JobHub">

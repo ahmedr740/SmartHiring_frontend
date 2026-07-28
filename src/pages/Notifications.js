@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, CheckCheck } from "lucide-react";
 import api from "../api/axios";
 import BrandMark from "../components/BrandMark";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { formatDateTime } from "../i18n/formatters";
 
 const getSavedUser = () => JSON.parse(localStorage.getItem("user") || "null");
 
@@ -76,9 +78,12 @@ function Notifications() {
             <header className="border-b border-brand-100/80 bg-white/95 shadow-sm backdrop-blur-xl">
                 <div className="jh-container flex min-h-20 items-center justify-between gap-4">
                     <BrandMark subtitle="Notification centre" />
-                    <button type="button" onClick={() => navigate(homeForRole(user?.role))} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-bold text-brand-700 hover:bg-brand-50">
-                        <ArrowLeft size={17} aria-hidden="true" /> <span className="hidden sm:inline">Back to dashboard</span><span className="sm:hidden">Back</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <LanguageSwitcher compact />
+                        <button type="button" onClick={() => navigate(homeForRole(user?.role))} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-bold text-brand-700 hover:bg-brand-50">
+                            <ArrowLeft size={17} aria-hidden="true" /> <span className="hidden sm:inline">Back to dashboard</span><span className="sm:hidden">Back</span>
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -148,7 +153,7 @@ function Notifications() {
                                     </p>
                                 </div>
                                 <time className="shrink-0 text-sm text-gray-400">
-                                    {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ""}
+                                    {notification.createdAt ? formatDateTime(notification.createdAt) : ""}
                                 </time>
                             </div>
                         </button>

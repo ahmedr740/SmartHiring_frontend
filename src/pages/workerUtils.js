@@ -1,3 +1,5 @@
+import { translateApiMessage } from "../i18n/formatters";
+
 export const statusClasses = {
     PENDING: "bg-amber-100 text-amber-700",
     ACCEPTED: "bg-emerald-100 text-emerald-700",
@@ -66,10 +68,10 @@ export const matchSourceLabel = (source) => {
 
 export const getApiErrorMessage = (error, fallback) => {
     if (!error.response) {
-        return "We couldn't reach the backend service. Please wait a moment and try again.";
+        return translateApiMessage("We couldn't reach the backend service. Please wait a moment and try again.");
     }
 
-    return error.response?.data?.message || fallback;
+    return translateApiMessage(error.response?.data?.message, fallback);
 };
 
 export const buildWorkerReminders = (applications) =>

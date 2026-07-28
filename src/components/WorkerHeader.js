@@ -2,6 +2,7 @@ import { BellRing, BriefcaseBusiness, House, LogOut, Sparkles, UserRound } from 
 import { useNavigate } from "react-router-dom";
 import BrandMark from "./BrandMark";
 import NotificationBell from "./NotificationBell";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const navItems = [
     { to: "/worker-home", label: "Home", icon: House },
@@ -25,6 +26,7 @@ function WorkerHeader({ userName, notificationLabel, notificationsEnabled, onTog
                 <div className="flex items-center justify-between gap-4">
                     <BrandMark subtitle={`Welcome, ${userName || "Worker"}`} />
                     <div className="flex items-center gap-2 lg:hidden">
+                        <LanguageSwitcher compact />
                         <NotificationBell />
                         <button type="button" onClick={handleLogout} className="grid h-11 w-11 place-items-center rounded-xl border border-gray-200 text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700" aria-label="Log out">
                             <LogOut size={18} aria-hidden="true" />
@@ -53,6 +55,7 @@ function WorkerHeader({ userName, notificationLabel, notificationsEnabled, onTog
                     )}
 
                     <div className="hidden items-center gap-2 lg:flex">
+                        <LanguageSwitcher compact />
                         <NotificationBell />
                         <button type="button" onClick={handleLogout} className="grid h-11 w-11 place-items-center rounded-xl border border-gray-200 text-gray-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700" aria-label="Log out">
                             <LogOut size={18} aria-hidden="true" />

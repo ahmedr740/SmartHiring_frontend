@@ -1,3 +1,5 @@
+import { translateDisplayText } from "../i18n/formatters";
+
 const LAST_SEEN_KEY = "smartHiringLastSeenNotificationAt";
 const NOTIFICATION_ENABLED_PREFIX = "smartHiringNotificationsEnabled:";
 
@@ -74,5 +76,5 @@ export const notifyOnce = (id, title, body, enabled = true) => {
     }
 
     localStorage.setItem(LAST_SEEN_KEY, id);
-    new window.Notification(title, { body });
+    new window.Notification(translateDisplayText(title), { body: translateDisplayText(body) });
 };

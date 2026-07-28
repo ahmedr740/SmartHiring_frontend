@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LogOut, Sparkles, Store } from "lucide-react";
 import api from "../api/axios";
 import BrandMark from "../components/BrandMark";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { getApiErrorMessage, isAiMatchSource, matchSourceLabel } from "./workerUtils";
 
 const getSavedUser = () => JSON.parse(localStorage.getItem("user") || "null");
@@ -125,6 +126,7 @@ function ManagerPostShift() {
                 <div className="jh-container flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <BrandMark subtitle={`Manager · ${profile?.restaurantName || profile?.name || user?.name || "Workspace"}`} />
                     <div className="flex flex-wrap items-center gap-2">
+                    <LanguageSwitcher compact />
                     <button
                         type="button"
                         onClick={() => navigate("/manager-home")}
