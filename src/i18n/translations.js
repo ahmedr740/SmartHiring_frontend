@@ -139,6 +139,12 @@ const zhHK = {
   "Jobs related to your profile": "符合你個人檔案的工作",
   "Matches are ranked by your skills, location, rating, availability, and completed shifts. Scores are advisory, so review every shift before applying.": "配對會根據你的技能、地點、評分、空閒時間和已完成更次排序。分數只供參考，申請前請查看每個更次。",
   "Loading job matches...": "正在載入工作配對…",
+  "No shifts reached a 45% match.": "目前沒有更次達到 45% 配對。",
+  "Showing your closest matches between 30% and 44% instead.": "現改為顯示配對度介乎 30% 至 44% 的最接近結果。",
+  "No shifts currently meet your 30% match minimum.": "目前沒有更次達到你的 30% 最低配對要求。",
+  "Add more profile details to improve your matches, or browse every open job.": "新增更多個人檔案資料以改善配對，或瀏覽所有空缺工作。",
+  "Browse all open jobs": "瀏覽所有空缺工作",
+  "No matched jobs found for this search.": "此搜尋找不到符合的工作。",
   "No open jobs are available to rank yet. Add shifts with a manager account first.": "暫時沒有可供配對的空缺工作，請先以經理帳戶新增更次。",
   "Review fit": "查看配對",
   "Application sent": "申請已送出",
@@ -436,7 +442,6 @@ const zhHK = {
   "No location listed": "未提供地點",
   "No skills listed": "未提供技能",
   "N/A": "不適用"
-  ,"AI applicant scores are advisory. Always review the applicant's relevant experience and availability before deciding.": "AI 申請人分數只供參考，作決定前請查看申請人的相關經驗和空閒時間。"
   ,"AI:": "AI："
   ,"Active manager": "活躍經理"
   ,"Assumptions:": "假設："

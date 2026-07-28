@@ -868,10 +868,6 @@ function ManagerHome() {
                     </div>
                 )}
 
-                <div className="max-w-4xl rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-                    AI applicant scores are advisory. Always review the applicant's relevant experience and availability before deciding.
-                </div>
-
                 {isLoadingMatches && (
                     <div className="max-w-4xl rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 shadow-sm">
                         Refreshing dashboard and applicant matches...

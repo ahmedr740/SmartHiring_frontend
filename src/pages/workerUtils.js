@@ -50,6 +50,56 @@ export const matchesShiftSearch = (shift, searchValue) => {
     );
 };
 
+export const getEffectiveMatchScore = (match) => {
+    const score = match?.aiScore ?? match?.fallbackScore;
+    if (score === null || score === undefined || score === "") {
+        return null;
+    }
+
+    const numericScore = Number(score);
+    return Number.isFinite(numericScore) ? numericScore : null;
+};
+
+export const selectQualifiedWorkerMatches = (shifts, matches, searchValue = "") => {
+    const candidates = shifts
+        .filter((shift) => shift.status === "OPEN")
+        .filter((shift) => matchesShiftSearch(shift, searchValue))
+        .map((shift) => ({
+            shift,
+            match: matches[shift.id],
+            score: getEffectiveMatchScore(matches[shift.id]),
+        }));
+
+    const scoredCandidates = candidates.filter(({ score }) => score !== null);
+    const strongMatches = scoredCandidates.filter(({ score }) => score >= 45);
+    const fallbackMatches = scoredCandidates.filter(({ score }) => score >= 30 && score < 45);
+    const selectedMatches = strongMatches.length > 0 ? strongMatches : fallbackMatches;
+
+    selectedMatches.sort((first, second) => {
+        const firstRank = Number(first.match?.rank);
+        const secondRank = Number(second.match?.rank);
+        const firstHasRank = Number.isFinite(firstRank) && firstRank > 0;
+        const secondHasRank = Number.isFinite(secondRank) && secondRank > 0;
+
+        if (firstHasRank && secondHasRank && firstRank !== secondRank) {
+            return firstRank - secondRank;
+        }
+        if (firstHasRank !== secondHasRank) {
+            return firstHasRank ? -1 : 1;
+        }
+        if (first.score !== second.score) {
+            return second.score - first.score;
+        }
+        return (first.shift.id || 0) - (second.shift.id || 0);
+    });
+
+    return {
+        shifts: selectedMatches.map(({ shift }) => shift),
+        candidateCount: candidates.length,
+        isFallbackActive: strongMatches.length === 0 && fallbackMatches.length > 0,
+    };
+};
+
 export const likedShiftIdsFromResponse = (likedJobs) =>
     new Set(likedJobs.map((likedJob) => likedJob.shift?.id).filter(Boolean));
 

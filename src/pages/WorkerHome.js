@@ -149,7 +149,26 @@ function WorkerHome() {
             />
 
             <div className="jh-container py-8 sm:py-10 lg:py-12">
-                <PageHeader eyebrow="Worker dashboard" title={`Good to see you, ${(profile?.name || user?.name || "there").split(" ")[0]}`} description="Track your progress, discover open shifts, and stay on top of upcoming work." />
+                <PageHeader
+                    eyebrow="Worker dashboard"
+                    title={`Good to see you, ${(profile?.name || user?.name || "there").split(" ")[0]}`}
+                    description="Track your progress, discover open shifts, and stay on top of upcoming work."
+                    actions={(
+                        <div className="w-full sm:w-80 lg:w-96">
+                            <div className="mb-3 sm:text-right">
+                                <h3 className="text-2xl font-bold text-gray-900">Open Shifts</h3>
+                                <p className="mt-1 text-sm text-gray-600">Search live openings and save interesting jobs for later.</p>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search title, role, location, or restaurant"
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                className="w-full rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                            />
+                        </div>
+                    )}
+                />
                 <section className="mb-10">
                     <div className="grid gap-4 sm:grid-cols-3">
                         <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-card">
@@ -178,21 +197,6 @@ function WorkerHome() {
 
                 <section className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
                     <div>
-                        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                            <div>
-                                <h3 className="text-3xl font-bold text-gray-900">Open Shifts</h3>
-                                <p className="mt-2 text-gray-600">Search live openings and save interesting jobs for later.</p>
-                            </div>
-
-                            <input
-                                type="text"
-                                placeholder="Search title, role, location, or restaurant"
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                className="w-full max-w-sm rounded-2xl border border-gray-200 px-4 py-3 shadow-sm focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
-                            />
-                        </div>
-
                         <div className="grid gap-6 md:grid-cols-2">
                             {filteredShifts.length > 0 ? (
                                 filteredShifts.map((shift) => (

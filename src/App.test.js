@@ -14,16 +14,9 @@ jest.mock("axios", () => ({
   }),
 }), { virtual: true });
 
-jest.mock("react-router-dom", () => ({
-  BrowserRouter: ({ children }) => <div>{children}</div>,
-  Routes: ({ children }) => <div>{children}</div>,
-  Route: ({ element }) => element,
-  useNavigate: () => jest.fn(),
-  useParams: () => ({ shiftId: "1" }),
-}), { virtual: true });
-
 jest.mock("./components/NotificationBell", () => () => null);
 test("renders JobHub landing page content", () => {
+  window.history.pushState({}, "", "/");
   render(<App />);
   expect(screen.getAllByText(/JobHub/i).length).toBeGreaterThan(0);
 });
