@@ -1,8 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, FileText, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import WorkerHeader from "../components/WorkerHeader";
-import { formatDateTime as formatLocalizedDateTime } from "../i18n/formatters";
 import PageHeader from "../components/ui/PageHeader";
 import api from "../api/axios";
 import {
@@ -13,30 +13,15 @@ import {
 } from "../api/browserNotifications";
 import { buildProfileDraft, getApiErrorMessage, getSavedUser, isActiveWorkerSession } from "./workerUtils";
 
-const formatMoney = (amount) =>
-    `$${Number(amount || 0).toFixed(2)}`;
-
-const formatDateTime = (value) => {
-    if (!value) {
-        return "Pending";
-    }
-
-    return formatLocalizedDateTime(value, {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
-
 function WorkerProfile() {
     const navigate = useNavigate();
+    const fileInputRef = useRef(null);
     const [user] = useState(getSavedUser);
     const [profile, setProfile] = useState(null);
     const [profileDraft, setProfileDraft] = useState(buildProfileDraft(null));
-    const [wallet, setWallet] = useState(null);
+    const [selectedCv, setSelectedCv] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
     const [notificationsEnabled, setNotificationsEnabled] = useState(() => getNotificationPreference(user?.id));
     const [feedback, setFeedback] = useState("");
@@ -50,13 +35,9 @@ function WorkerProfile() {
 
         const loadProfile = async () => {
             try {
-                const [profileResponse, walletResponse] = await Promise.all([
-                    api.get("/users/me"),
-                    api.get("/wallet"),
-                ]);
-                setProfile(profileResponse.data);
-                setProfileDraft(buildProfileDraft(profileResponse.data));
-                setWallet(walletResponse.data);
+                const response = await api.get("/users/me");
+                setProfile(response.data);
+                setProfileDraft(buildProfileDraft(response.data));
             } catch (error) {
                 console.error(error);
                 setFeedback(getApiErrorMessage(error, "We couldn't load your profile right now."));
@@ -64,7 +45,7 @@ function WorkerProfile() {
         };
 
         loadProfile();
-    }, [navigate, user]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [navigate, user]);
 
     const handleProfileDraftChange = (field, value) => {
         setProfileDraft((current) => ({ ...current, [field]: value }));
@@ -81,30 +62,40 @@ function WorkerProfile() {
             if (savedUser) {
                 localStorage.setItem("user", JSON.stringify({ ...savedUser, name: response.data.name }));
             }
-            setFeedback("Profile updated successfully.");
+            setFeedback("Profile updated. Your next AI matches will use these details.");
         } catch (error) {
             console.error(error);
-            setFeedback(error.response?.data?.message || "We couldn't update your profile.");
+            setFeedback(getApiErrorMessage(error, "We couldn't update your profile."));
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleWithdraw = async () => {
+    const handleCvUpload = async () => {
+        if (!selectedCv) {
+            fileInputRef.current?.click();
+            return;
+        }
+
         try {
             setFeedback("");
-            setIsWithdrawing(true);
-            const response = await api.post("/wallet/withdrawals", {
-                amount: wallet?.availableBalance,
-                methodLabel: "Bank transfer",
+            setIsUploading(true);
+            const formData = new FormData();
+            formData.append("file", selectedCv);
+            const response = await api.post("/users/me/cv", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
             });
-            setWallet(response.data);
-            setFeedback("Withdrawal request completed.");
+            setProfile(response.data);
+            setSelectedCv(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+            setFeedback("CV uploaded. Your next AI matches will include its skills and experience.");
         } catch (error) {
             console.error(error);
-            setFeedback(getApiErrorMessage(error, "We couldn't complete the withdrawal right now."));
+            setFeedback(getApiErrorMessage(error, "We couldn't upload this CV."));
         } finally {
-            setIsWithdrawing(false);
+            setIsUploading(false);
         }
     };
 
@@ -113,8 +104,6 @@ function WorkerProfile() {
         setNotificationPermission(result.permission);
         setNotificationsEnabled(result.enabled);
     };
-
-    const availableBalance = Number(wallet?.availableBalance || 0);
 
     return (
         <div className="jh-page">
@@ -126,11 +115,11 @@ function WorkerProfile() {
             />
 
             <div className="jh-container py-8 sm:py-10 lg:py-12">
-                <section className="max-w-5xl rounded-3xl border border-gray-100 bg-white p-8 shadow-card">
-                    <PageHeader eyebrow="Profile" title="Update matching profile" description="Keep your skills, location, and availability updated so job matches are more accurate." />
+                <section className="max-w-5xl rounded-3xl border border-gray-100 bg-white p-6 shadow-card sm:p-8">
+                    <PageHeader eyebrow="Profile" title="Build your matching profile" description="Your skills, experience, location, availability, and CV help AI rank the most relevant shifts for you." />
 
                     {feedback && (
-                        <div className="mb-6 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
+                        <div className="mb-6 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700" role="status">
                             {feedback}
                         </div>
                     )}
@@ -138,88 +127,40 @@ function WorkerProfile() {
                     <div className="grid gap-5 md:grid-cols-2">
                         <label><span className="jh-label">Full name</span><input type="text" value={profileDraft.name} onChange={(event) => handleProfileDraftChange("name", event.target.value)} placeholder="Your name" className="jh-field" /></label>
                         <label><span className="jh-label">Preferred location</span><input type="text" value={profileDraft.location} onChange={(event) => handleProfileDraftChange("location", event.target.value)} placeholder="Area or district" className="jh-field" /></label>
-                        <label><span className="jh-label">Skills</span><textarea value={profileDraft.skills} onChange={(event) => handleProfileDraftChange("skills", event.target.value)} placeholder="Skills, separated by commas" className="jh-field min-h-[120px] resize-y" /></label>
+                        <label><span className="jh-label">Skills</span><textarea value={profileDraft.skills} onChange={(event) => handleProfileDraftChange("skills", event.target.value)} placeholder="For example: waiter, barista, cashier" className="jh-field min-h-[120px] resize-y" /></label>
                         <label><span className="jh-label">Availability</span><textarea value={profileDraft.availability} onChange={(event) => handleProfileDraftChange("availability", event.target.value)} placeholder="For example: weeknights after 6pm, Saturdays" className="jh-field min-h-[120px] resize-y" /></label>
+                        <label className="md:col-span-2"><span className="jh-label">Work experience</span><textarea value={profileDraft.experience} onChange={(event) => handleProfileDraftChange("experience", event.target.value)} placeholder="Describe your previous roles, responsibilities, and years of experience" className="jh-field min-h-[150px] resize-y" maxLength={4000} /><span className="mt-2 block text-xs text-gray-500">Focus on relevant duties, equipment, cuisines, and service environments.</span></label>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleSaveProfile}
-                        disabled={isSaving}
-                        className="mt-6 rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
-                    >
+                    <button type="button" onClick={handleSaveProfile} disabled={isSaving} className="mt-6 rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300">
                         {isSaving ? "Saving..." : "Save profile"}
                     </button>
                 </section>
 
-                <section className="mt-8 max-w-5xl rounded-3xl border border-gray-100 bg-white p-8 shadow-card">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <section className="mt-8 max-w-5xl rounded-3xl border border-gray-100 bg-white p-6 shadow-card sm:p-8">
+                    <div className="flex items-start gap-4">
+                        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700"><FileText size={24} aria-hidden="true" /></div>
                         <div>
-                            <p className="text-sm uppercase tracking-[0.3em] text-brand-500">Wallet</p>
-                            <h2 className="mt-3 text-4xl font-bold text-gray-900">Earnings wallet</h2>
-                            <p className="mt-3 max-w-2xl text-gray-600">
-                                Track paid shift earnings, previous withdrawals, and the balance available to transfer.
-                            </p>
+                            <p className="text-sm font-bold uppercase tracking-[0.22em] text-brand-500">CV for AI matching</p>
+                            <h2 className="mt-2 text-2xl font-bold text-gray-900">Add more detail with your CV</h2>
+                            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">We extract the text from your CV so matching can consider relevant roles, responsibilities, and qualifications. Contact details and protected personal information are not matching factors.</p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={handleWithdraw}
-                            disabled={isWithdrawing || availableBalance <= 0}
-                            className="rounded-xl bg-gray-900 px-5 py-3 font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
-                        >
-                            {isWithdrawing ? "Processing..." : "Withdraw available balance"}
+                    </div>
+
+                    {profile?.cvFileName && (
+                        <div className="mt-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            <CheckCircle2 size={18} aria-hidden="true" />
+                            <span><strong>Current CV:</strong> {profile.cvFileName}</span>
+                        </div>
+                    )}
+
+                    <div className="mt-6 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-5">
+                        <input ref={fileInputRef} type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" onChange={(event) => setSelectedCv(event.target.files?.[0] || null)} className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-xl file:border-0 file:bg-white file:px-4 file:py-2.5 file:font-semibold file:text-brand-700 file:shadow-sm hover:file:bg-brand-50" aria-describedby="cv-help" />
+                        <p id="cv-help" className="mt-3 text-xs text-gray-500">PDF, DOCX, or TXT · maximum 5 MB · uploading a new file replaces the current CV</p>
+                        <button type="button" onClick={handleCvUpload} disabled={isUploading} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-3 font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300">
+                            <Upload size={18} aria-hidden="true" />
+                            {isUploading ? "Uploading..." : selectedCv ? "Submit CV for matching" : "Choose a CV"}
                         </button>
-                    </div>
-
-                    <div className="mt-8 grid gap-4 md:grid-cols-3">
-                        <div className="rounded-2xl border border-brand-100 bg-brand-50 p-5">
-                            <p className="text-sm font-medium text-brand-700">Available balance</p>
-                            <p className="mt-3 text-3xl font-bold text-gray-900">{formatMoney(wallet?.availableBalance)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                            <p className="text-sm font-medium text-emerald-700">Total earnings</p>
-                            <p className="mt-3 text-3xl font-bold text-gray-900">{formatMoney(wallet?.totalEarnings)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5">
-                            <p className="text-sm font-medium text-sky-700">Withdrawn</p>
-                            <p className="mt-3 text-3xl font-bold text-gray-900">{formatMoney(wallet?.totalWithdrawn)}</p>
-                        </div>
-                    </div>
-
-                    <div className="mt-8 overflow-hidden rounded-2xl border border-gray-100">
-                        <div className="grid grid-cols-[1.2fr_0.8fr_0.8fr] bg-gray-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 md:grid-cols-[1.5fr_0.8fr_0.8fr_0.8fr]">
-                            <span>Transaction</span>
-                            <span>Amount</span>
-                            <span>Status</span>
-                            <span className="hidden md:block">Date</span>
-                        </div>
-
-                        {wallet?.transactions?.length ? (
-                            wallet.transactions.map((transaction) => (
-                                <div
-                                    key={`${transaction.type}-${transaction.id}`}
-                                    className="grid grid-cols-[1.2fr_0.8fr_0.8fr] items-center gap-3 border-t border-gray-100 px-5 py-4 text-sm md:grid-cols-[1.5fr_0.8fr_0.8fr_0.8fr]"
-                                >
-                                    <div>
-                                        <p className="font-semibold text-gray-900">{transaction.title}</p>
-                                        <p className="mt-1 text-xs text-gray-500">
-                                            {transaction.type === "EARNING" ? "Shift earning" : transaction.methodLabel || "Withdrawal"}
-                                        </p>
-                                    </div>
-                                    <span className={transaction.type === "EARNING" ? "font-semibold text-emerald-700" : "font-semibold text-gray-700"}>
-                                        {transaction.type === "EARNING" ? "+" : "-"}{formatMoney(transaction.amount)}
-                                    </span>
-                                    <span className="w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                                        {transaction.status}
-                                    </span>
-                                    <span className="hidden text-gray-500 md:block">{formatDateTime(transaction.completedAt || transaction.createdAt)}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="border-t border-gray-100 px-5 py-8 text-sm text-gray-500">
-                                Paid shifts and withdrawals will appear here.
-                            </div>
-                        )}
                     </div>
                 </section>
             </div>

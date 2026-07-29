@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import WorkerHome from "./pages/WorkerHome";
 import WorkerMatches from "./pages/WorkerMatches";
 import WorkerProfile from "./pages/WorkerProfile";
+import WorkerWallet from "./pages/WorkerWallet";
 import WorkerJobs from "./pages/WorkerJobs";
 import ManagerHome from "./pages/ManagerHome";
 import ManagerPostShift from "./pages/ManagerPostShift";
@@ -29,6 +30,7 @@ function App() {
                 <Route path="/worker-home" element={<WorkerHome />} />
                 <Route path="/worker-matches" element={<WorkerMatches />} />
                 <Route path="/worker-profile" element={<WorkerProfile />} />
+                <Route path="/worker-wallet" element={<WorkerWallet />} />
                 <Route path="/worker-jobs" element={<WorkerJobs />} />
                 <Route path="/manager-home" element={<ManagerHome />} />
                 <Route path="/manager-post-shift" element={<ManagerPostShift />} />

@@ -143,7 +143,7 @@ function WorkerMatches() {
                 <PageHeader
                     eyebrow="AI job match"
                     title="Jobs related to your profile"
-                    description="Matches are ranked by your skills, location, rating, availability, and completed shifts. Scores are advisory, so review every shift before applying."
+                    description="Matches are ranked by your skills, experience, CV, location, rating, availability, and completed shifts. Scores are advisory, so review every shift before applying."
                     actions={(
                         <input
                             type="text"

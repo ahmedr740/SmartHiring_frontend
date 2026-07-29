@@ -1,14 +1,24 @@
 import {
+    buildProfileDraft,
     getEffectiveMatchScore,
     isAiMatchSource,
     matchSourceLabel,
     selectQualifiedWorkerMatches,
 } from "./workerUtils";
 
+test("builds an editable worker profile with experience", () => {
+    expect(buildProfileDraft({ name: "Ava", experience: "Two years as a waiter" })).toEqual({
+        name: "Ava",
+        skills: "",
+        location: "",
+        availability: "",
+        experience: "Two years as a waiter",
+    });
+});
+
 test("recognizes hosted DeepSeek recommendations as AI", () => {
     expect(isAiMatchSource("N8N_DEEPSEEK")).toBe(true);
     expect(matchSourceLabel("N8N_DEEPSEEK")).toBe("DeepSeek AI");
-    expect(matchSourceLabel("N8N_OLLAMA")).toBe("Local AI");
     expect(matchSourceLabel("FALLBACK")).toBe("Fallback");
 });
 

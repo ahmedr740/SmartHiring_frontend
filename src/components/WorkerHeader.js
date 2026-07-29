@@ -1,4 +1,4 @@
-import { BellRing, BriefcaseBusiness, House, LogOut, Sparkles, UserRound } from "lucide-react";
+import { BellRing, BriefcaseBusiness, House, LogOut, Sparkles, UserRound, WalletCards } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BrandMark from "./BrandMark";
 import NotificationBell from "./NotificationBell";
@@ -9,6 +9,7 @@ const navItems = [
     { to: "/worker-matches", label: "AI matches", icon: Sparkles },
     { to: "/worker-jobs", label: "My jobs", icon: BriefcaseBusiness },
     { to: "/worker-profile", label: "Profile", icon: UserRound },
+    { to: "/worker-wallet", label: "Wallet", icon: WalletCards },
 ];
 
 function WorkerHeader({ userName, notificationLabel, notificationsEnabled, onToggleNotifications }) {

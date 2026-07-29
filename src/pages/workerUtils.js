@@ -33,6 +33,7 @@ export const buildProfileDraft = (profile) => ({
     skills: profile?.skills || "",
     location: profile?.location || "",
     availability: profile?.availability || "",
+    experience: profile?.experience || "",
 });
 
 export const matchesShiftSearch = (shift, searchValue) => {
@@ -103,15 +104,11 @@ export const selectQualifiedWorkerMatches = (shifts, matches, searchValue = "") 
 export const likedShiftIdsFromResponse = (likedJobs) =>
     new Set(likedJobs.map((likedJob) => likedJob.shift?.id).filter(Boolean));
 
-export const isAiMatchSource = (source) =>
-    source === "OLLAMA" || source === "N8N_OLLAMA" || source === "N8N_DEEPSEEK";
+export const isAiMatchSource = (source) => source === "N8N_DEEPSEEK";
 
 export const matchSourceLabel = (source) => {
     if (source === "N8N_DEEPSEEK") {
         return "DeepSeek AI";
-    }
-    if (source === "OLLAMA" || source === "N8N_OLLAMA") {
-        return "Local AI";
     }
     return "Fallback";
 };
